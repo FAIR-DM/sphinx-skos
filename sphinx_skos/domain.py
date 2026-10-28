@@ -17,8 +17,9 @@ from sphinx_skos.vocabularies import Vocabularies
 class SKOSDomain(Domain):
     """Hold the three directives and the vocabularies of the current build.
 
-    The domain's data holds the fingerprint of the vocabulary files the
-    environment was last read with, which Sphinx keeps with the environment.
+    The domain's data holds the fingerprint of the vocabulary files and the
+    extension's version the environment was last read with, which Sphinx keeps
+    with the environment.
     """
 
     name = "skos"
@@ -28,7 +29,7 @@ class SKOSDomain(Domain):
         "concept": ConceptDirective,
         "collection": CollectionDirective,
     }
-    initial_data: ClassVar = {"fingerprint": ""}
+    initial_data: ClassVar = {"fingerprint": "", "version": ""}
 
     vocabularies: Vocabularies
     pages: GeneratedPages

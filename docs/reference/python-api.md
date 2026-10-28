@@ -21,9 +21,10 @@ warnings take part in Sphinx's warning handling, including `-W`.
   `SKOSDomain`.
 
 `find_outdated(app, env, added, changed, removed)`
-: Connected to Sphinx's `env-get-outdated` event. When the fingerprint of the vocabulary files
-  differs from the one the environment was last read with, it stores the new one and names every
-  document of the site as outdated, so a rebuild gives what a clean build gives.
+: Connected to Sphinx's `env-get-outdated` event. When the fingerprint of the vocabulary files,
+  or the extension's version, differs from the one the environment was last read with, it stores
+  the new one and names every document of the site as outdated, so a rebuild gives what a clean
+  build gives, including after the extension is upgraded.
 
 `write_copies(app, pagename, templatename, context, doctree)`
 : Connected to Sphinx's `html-page-context` event. For a page the extension generated, under a
@@ -113,8 +114,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `SKOSDomain`
 : The `skos` domain. It holds the three directives, and the `vocabularies` and `pages` of the
-  build in progress, and the `fingerprint` of the vocabulary files the environment was last read
-  with in its `data`.
+  build in progress, and the `fingerprint` of the vocabulary files and the extension `version` the
+  environment was last read with in its `data`.
 
 ## Module `sphinx_skos.directives`
 
