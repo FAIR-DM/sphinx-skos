@@ -47,4 +47,5 @@ A resource gets a build warning naming it, and no page, when:
   sorts first. `a` and `a/index` are the same address, and an address ending in `/` is the
   directory of that name.
 
-The site's own document is kept in every case.
+The site's own document is kept in every case, including a file that `exclude_patterns` hides
+from Sphinx: the page is not written over it and the warning names the address and the resource.

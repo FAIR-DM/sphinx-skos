@@ -187,7 +187,9 @@ class GeneratedPages:
     def write(self, srcdir: str | Path) -> None:
         """Write the source of every page into the source directory.
 
-        A file is written only when its text differs from what is on disk.
+        A file is written only when its text differs from what is on disk. A
+        file at a page's address that the extension did not write is left as it
+        is and named in a warning.
 
         Args:
             srcdir: The site's source directory.
@@ -195,8 +197,17 @@ class GeneratedPages:
         for uri, docname in self.docnames.items():
             path = Path(srcdir) / f"{docname}{self.suffix}"
             text = self.source_text(uri, self.vocabularies.resources[uri])
-            if path.exists() and path.read_text(encoding="utf-8") == text:
-                continue
+            if path.exists():
+                if not self.is_generated(path):
+                    logger.warning(
+                        "Page address %s of %s is a file of the site's own: "
+                        "the page is not written",
+                        docname,
+                        uri,
+                    )
+                    continue
+                if path.read_text(encoding="utf-8") == text:
+                    continue
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
 

@@ -233,6 +233,19 @@ class TestCollisions:
         assert "fine" in app.env.found_docs
 
 
+class TestHiddenSiteDocuments:
+    @pytest.mark.sphinx("dirhtml", testroot="hidden")
+    def test_a_site_file_hidden_by_exclude_patterns_is_not_overwritten(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        app.build()
+
+        original = rootdir / "test-hidden" / "hidden.rst"
+        assert (Path(app.srcdir) / "hidden.rst").read_bytes() == original.read_bytes()
+        assert len(warnings_naming(app, BASE + "hidden")) == 1
+        assert "shown" in app.env.found_docs
+
+
 class TestSourceSuffix:
     @pytest.mark.sphinx("dirhtml", testroot="suffix")
     def test_pages_use_the_suffix_of_the_sites_restructuredtext_files(

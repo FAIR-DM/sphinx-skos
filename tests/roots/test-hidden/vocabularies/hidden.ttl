@@ -1,0 +1,4 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/hidden> a skos:Concept .
+<https://example.org/vocab/shown> a skos:Concept .
