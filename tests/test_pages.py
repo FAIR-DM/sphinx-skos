@@ -111,6 +111,38 @@ class TestGeneratedPages:
         assert app.warning.getvalue() == ""
 
 
+class TestThemesAndBuilders:
+    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    def test_a_site_builds_clean_with_the_same_pages_under_any_theme(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        theme: str,
+    ) -> None:
+        site = tmp_path / theme
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+
+        app = make_app("dirhtml", srcdir=site, confoverrides={"html_theme": theme})
+        app.build()
+
+        assert app.warning.getvalue() == ""
+        assert app.env.found_docs - {"index"} == ADDRESSES
+        for address in ADDRESSES:
+            assert (Path(app.outdir) / address / "index.html").is_file()
+
+    @pytest.mark.sphinx("html", testroot="vocabularies")
+    def test_the_html_builder_writes_each_page_at_the_file_it_gives_its_name(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.warning.getvalue() == ""
+        for address in ADDRESSES:
+            assert Path(app.builder.get_outfilename(address)).is_file()
+
+
 class TestCleanUp:
     def test_a_file_without_the_marker_is_never_deleted(
         self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
