@@ -25,13 +25,13 @@ repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
 
    jobs:
      site:
-       uses: FAIR-DM/sphinx-skos/.github/workflows/build-site.yml@v0.3.0
+       uses: FAIR-DM/sphinx-skos/.github/workflows/build-site.yml@v0.4.0
        permissions:
          contents: read
          pages: write
          id-token: write
        with:
-         packages: sphinx-skos==0.3.0 furo
+         packages: sphinx-skos==0.4.0 furo
          deploy: ${{ github.event_name == 'push' }}
    ```
 
