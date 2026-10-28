@@ -212,7 +212,9 @@ class TestConceptLinks:
     ) -> None:
         hub = BASE + "rel/hub"
         titles = graph_titles(rootdir, "test-relations")
-        expected = hrefs(app, hub, computed_order(titles, rel("rel/col-a", "rel/col-b")))
+        expected = hrefs(
+            app, hub, computed_order(titles, rel("rel/col-a", "rel/col-b"))
+        )
         app.build()
 
         assert expected in field_links(app, hub)
@@ -448,3 +450,124 @@ class TestCollectionPage:
         app.build()
 
         assert not any(field_links(app, BASE + "rel/col-c"))
+
+
+def shown_fields(app: SphinxTestApp, docname: str, uri: str) -> list[tuple[str, ...]]:
+    """Return each field of the directive for ``uri`` in a document, as data.
+
+    A field is its text, then the address of each link in it.
+    """
+    doctree = app.env.get_doctree(docname)
+    shown = []
+    for section in doctree.findall(nodes.section):
+        field_list = next(
+            (
+                child
+                for child in section.children
+                if isinstance(child, nodes.field_list)
+            ),
+            None,
+        )
+        if field_list is None or field_list[0].astext().split("\n\n")[-1] != uri:
+            continue
+        for field in field_list.findall(nodes.field):
+            addresses = [
+                str(node.get("reftarget") or node.get("refuri"))
+                for node in field.findall(nodes.Element)
+                if node.get("reftarget") or node.get("refuri")
+            ]
+            shown.append((field.astext(), *addresses))
+        break
+    return shown
+
+
+class TestHandWrittenDirectives:
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_the_site_builds_without_a_warning(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    @pytest.mark.parametrize("name", ["rel/hub", "rel", "rel/col-a"])
+    def test_each_resource_shows_the_fields_and_links_of_its_generated_page(
+        self, app: SphinxTestApp, name: str
+    ) -> None:
+        app.build()
+
+        by_hand = shown_fields(app, "guide", BASE + name)
+        assert len(by_hand) > 1
+        assert by_hand == shown_fields(app, name, BASE + name)
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_the_generated_pages_are_still_built(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        for name in ("rel/hub", "rel", "rel/col-a"):
+            assert (Path(app.outdir) / name / "index.html").is_file()
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_only_generated_pages_have_copies_and_alternate_links(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        for name in ("rel/hub", "rel", "rel/col-a"):
+            assert (Path(app.outdir) / name / "index.ttl").is_file()
+            assert 'rel="alternate"' in page_html(app, name)
+        for name in ("guide", "sections"):
+            assert not list((Path(app.outdir) / name).glob("index.[!h]*"))
+            assert 'rel="alternate"' not in page_html(app, name)
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_the_prose_page_keeps_its_own_content(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert "This page is the site" in page_html(app, "guide")
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_a_directive_under_a_titled_section_and_twice_in_one_page_build_clean(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        document = app.env.get_doctree("sections")
+        ids = [
+            identifier
+            for node in document.findall(nodes.Element)
+            for identifier in node["ids"]
+        ]
+        assert len(ids) == len(set(ids))
+        assert len(list(document.findall(nodes.field_list))) == 2
+
+
+class TestHandWrittenDirectivesThatCannotShow:
+    @pytest.mark.sphinx("dirhtml", testroot="prose-faulty", freshenv=True)
+    @pytest.mark.parametrize(
+        ("page", "uri"),
+        [
+            ("unknown", BASE + "rel/nothing-here"),
+            ("wrongkind", BASE + "rel"),
+            ("missing", None),
+        ],
+    )
+    def test_each_warns_naming_the_page_and_any_uri(
+        self, app: SphinxTestApp, page: str, uri: str | None
+    ) -> None:
+        app.build()
+
+        warnings = [
+            line
+            for line in app.warning.getvalue().splitlines()
+            if f"{page}.rst" in line
+        ]
+        assert len(warnings) == 1
+        if uri is not None:
+            assert uri in warnings[0]
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose-faulty", freshenv=True)
+    def test_the_three_faults_are_the_only_warnings(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        lines = app.warning.getvalue().splitlines()
+        assert len([line for line in lines if ".rst:" in line]) == 3

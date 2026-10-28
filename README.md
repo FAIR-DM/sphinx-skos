@@ -31,7 +31,8 @@ makes it look.
 Early. The package reads your vocabulary files and writes one Sphinx page for every vocabulary,
 concept and collection, each with its facts and links, and writes that resource's own RDF beside
 it in Turtle, JSON-LD, RDF/XML and N-Triples, named in the page's head with `<link rel="alternate">`
-elements. The directives for your own pages are still to come.
+elements. Your own pages can show any resource with the `skos:vocabulary`, `skos:concept` and
+`skos:collection` directives.
 
 ## Usage
 
