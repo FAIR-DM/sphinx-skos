@@ -1,0 +1,44 @@
+@base <https://example.org/vocab/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<date-types> a skos:ConceptScheme ;
+    skos:prefLabel "Date types"@en, "Datumstypen"@de ;
+    dcterms:description "Kinds of dates a record can carry."@en ;
+    skos:hasTopConcept <date-types/available> .
+
+<date-types/available> a skos:Concept ;
+    skos:inScheme <date-types> ;
+    skos:topConceptOf <date-types> ;
+    skos:prefLabel "Available"@en, "Verfügbar"@de ;
+    skos:altLabel "Accessible"@en ;
+    skos:hiddenLabel "avail"@en ;
+    skos:definition "The date the resource became available."@en,
+        "Das Datum, an dem die Ressource verfügbar wurde."@de ;
+    skos:notation "AV" ;
+    skos:related <date-types/created> ;
+    skos:exactMatch <https://other.example.com/terms/available> ;
+    skos:closeMatch <methods/survey> .
+
+<date-types/created> a skos:Concept ;
+    skos:inScheme <date-types> ;
+    skos:prefLabel "Created"@en ;
+    skos:broader <date-types/available> .
+
+<date-types/issued> a skos:Concept ;
+    skos:inScheme <date-types> ;
+    skos:prefLabel "Issued" .
+
+<date-types/markup> a skos:Concept ;
+    skos:inScheme <date-types> ;
+    skos:prefLabel "<b>&amp;</b>"@en .
+
+<date-types/by-origin> a skos:Collection ;
+    skos:member <date-types/created>, <date-types/available> .
+
+<date-types/in-order> a skos:OrderedCollection ;
+    skos:memberList (<date-types/issued> <date-types/created> <date-types/available>) .
+
+<organisations/acme> a foaf:Organization ;
+    foaf:name "Acme" .
