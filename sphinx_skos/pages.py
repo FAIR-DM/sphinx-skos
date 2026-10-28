@@ -7,6 +7,7 @@ from sphinx.builders import Builder
 from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.util import logging
 
+from sphinx_skos.copies import RdfCopies
 from sphinx_skos.vocabularies import Kind, Vocabularies
 
 logger = logging.getLogger(__name__)
@@ -29,11 +30,13 @@ class GeneratedPages:
 
     Attributes:
         docnames: The generated document of each resource, by URI.
+        uris: The resource of each generated document, by document name.
         suffix: The file suffix of the generated sources, if the site has a
             reStructuredText one.
     """
 
     docnames: dict[str, str]
+    uris: dict[str, str]
     suffix: str | None
 
     def __init__(
@@ -45,6 +48,7 @@ class GeneratedPages:
     ) -> None:
         self.vocabularies = vocabularies
         self.docnames = {}
+        self.uris = {}
         self.suffix = self.find_suffix(source_suffix)
         if self.suffix is None or not self.has_base_uri(base_uri):
             return
@@ -63,6 +67,7 @@ class GeneratedPages:
                 continue
             taken.add(key)
             self.docnames[uri] = docname
+            self.uris[docname] = uri
 
     def has_base_uri(self, base_uri: str) -> bool:
         """Say whether pages can be addressed, warning once if they cannot.
@@ -149,6 +154,18 @@ class GeneratedPages:
         """
         return self.docnames.get(uri)
 
+    def uri_for(self, docname: str) -> str | None:
+        """Return the resource a generated document is the page of.
+
+        Args:
+            docname: A document name.
+
+        Returns:
+            The resource's URI, or ``None`` if the extension did not generate
+            the document.
+        """
+        return self.uris.get(docname)
+
     def source_text(self, uri: str, kind: Kind) -> str:
         """Return the source of one generated page.
 
@@ -186,7 +203,8 @@ class GeneratedPages:
         """Delete the generated sources whose resource is gone, and their output.
 
         Only a file whose first line is the marker is touched. For an HTML
-        builder the page's output file and its copied source go too.
+        builder the page's output file, its RDF copies and its copied source go
+        too.
 
         Args:
             srcdir: The site's source directory.
@@ -236,8 +254,10 @@ class GeneratedPages:
         copied = docname + (self.suffix or "")
         if self.suffix != builder.config.html_sourcelink_suffix:
             copied += builder.config.html_sourcelink_suffix
+        outfile = builder.get_outfilename(docname)
         for path in (
-            Path(builder.get_outfilename(docname)),
+            Path(outfile),
+            *RdfCopies.paths(outfile),
             Path(builder.outdir) / "_sources" / copied,
         ):
             path.unlink(missing_ok=True)

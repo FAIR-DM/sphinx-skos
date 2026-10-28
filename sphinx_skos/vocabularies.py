@@ -158,6 +158,24 @@ class Vocabularies:
                         resources[str(subject)] = kind
         return resources
 
+    def own_rdf(self, uri: str) -> Graph:
+        """Return a resource's own RDF.
+
+        That is every triple with the resource as subject, and the triples of
+        the blank nodes those reach. Statements other resources make about it
+        are left out.
+
+        Args:
+            uri: The resource's URI.
+
+        Returns:
+            A graph holding those triples and the files' namespace prefixes.
+        """
+        own = Graph()
+        for prefix, namespace in self.graph.namespaces():
+            own.bind(prefix, namespace)
+        return self.graph.cbd(URIRef(uri), target_graph=own, include_reifications=False)
+
     def title(self, uri: str, language: str) -> str:
         """Return the title of a resource.
 

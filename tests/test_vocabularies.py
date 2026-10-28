@@ -375,3 +375,29 @@ class TestVocabulariesRelations:
         assert vocabularies.descriptions(BASE + "rel") == [
             Label("Describes the relations.", "en")
         ]
+
+
+class TestVocabulariesOwnRdf:
+    @pytest.fixture
+    def vocabularies(self, rootdir: Path) -> Vocabularies:
+        return Vocabularies(["vocabularies/*.ttl"], rootdir / "test-relations")
+
+    def test_own_rdf_is_only_triples_with_the_resource_as_subject_or_in_its_lists(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        own = vocabularies.own_rdf(BASE + "rel/col-a")
+
+        assert (URIRef(BASE + "rel/col-a"), RDF.type, SKOS.OrderedCollection) in own
+        assert (None, SKOS.member, URIRef(BASE + "rel/r1")) not in own
+        assert set(own.subjects()) - {URIRef(BASE + "rel/col-a")} <= set(
+            own.objects()
+        )
+
+    def test_own_rdf_keeps_the_files_namespace_prefixes(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        own = vocabularies.own_rdf(BASE + "rel/hub")
+
+        assert dict(own.namespaces())["skos"] == dict(vocabularies.graph.namespaces())[
+            "skos"
+        ]

@@ -25,6 +25,11 @@ warnings take part in Sphinx's warning handling, including `-W`.
   differs from the one the environment was last read with, it stores the new one and names every
   document of the site as outdated, so a rebuild gives what a clean build gives.
 
+`write_copies(app, pagename, templatename, context, doctree)`
+: Connected to Sphinx's `html-page-context` event. For a page the extension generated, under a
+  builder that writes HTML, it writes the page's RDF copies and adds an
+  `<link rel="alternate">` element for each to the page's `metatags`. Other pages are left alone.
+
 `find_site_documents(app)`
 : The names of the site's own documents: every document in the source directory whose file does
   not start with the generated-page marker line.
@@ -52,6 +57,10 @@ warnings take part in Sphinx's warning handling, including `-W`.
   property points at or comes from. `listed_members(collection)` gives an ordered collection's
   members in list order and `all_members(collection)` every member it names.
 
+`Vocabularies.own_rdf(uri)`
+: A resource's own RDF as a new graph: every triple with the resource as subject and those of the
+  blank nodes they reach, with the namespace prefixes of the vocabulary files.
+
 `Kind`
 : The kind of a resource: `"vocabulary"`, `"concept"` or `"collection"`.
 
@@ -75,7 +84,20 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : The page of every resource that can have one. `docname_for(uri)` gives a resource's document
   name, or `None` when it has no page. `write(srcdir)` writes the page sources. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
-  their output file and copied source.
+  their output file, RDF copies and copied source. `uri_for(docname)` gives the resource a
+  generated document is the page of, or `None`; its `uris` attribute holds them all.
+
+## Module `sphinx_skos.copies`
+
+`RdfCopies(vocabularies)`
+: Writes the RDF copies of a page. `write(uri, outfile)` serialises a resource's
+  own RDF in every format beside the page's output file, `paths(outfile)` says where the copies
+  of a page are and `alternate_links(outfile)` gives the `<link rel="alternate">` elements that
+  name them.
+
+`CopyFormat`, `COPY_FORMATS`
+: A format a copy is written in: `suffix`, `rdflib_format` and `media_type`. `COPY_FORMATS` lists
+  the four.
 
 ## Module `sphinx_skos.domain`
 
