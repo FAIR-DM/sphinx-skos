@@ -28,7 +28,7 @@ makes it look.
 
 ## Status
 
-Early. The version is `0.0.1`. The package installs and registers with Sphinx, but it does not
+Early. The package installs and registers with Sphinx, but it does not
 yet read vocabularies or generate pages. The configuration below shows where it is going, not
 what it does today.
 
