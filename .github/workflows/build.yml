@@ -1,0 +1,20 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  # No paths filter: these checks are required, and a path-filtered required
+  # check never reports on a pull request outside its paths, which blocks merge.
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  call-build:
+    uses: django-mvp/shared/.github/workflows/build.yml@v0.6.0
+    permissions:
+      contents: read
+    with:
+      source-dir: sphinx_skos
+    secrets: inherit
