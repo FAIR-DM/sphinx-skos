@@ -68,8 +68,12 @@ def clean_build(
             name
             for name in names
             if name == "_build"
-            or (Path(directory) / name).is_file()
-            and (Path(directory) / name).read_text(encoding="utf-8").startswith(MARKER)
+            or (
+                (Path(directory) / name).is_file()
+                and (Path(directory) / name)
+                .read_text(encoding="utf-8")
+                .startswith(MARKER)
+            )
         }
 
     shutil.copytree(site, fresh, ignore=skip)
@@ -123,7 +127,9 @@ class TestRebuild:
 
         assert not (site / "methods" / "loose.rst").exists()
         assert not (Path(app.outdir) / "methods" / "loose").exists()
-        assert not (Path(app.outdir) / "_sources" / "methods" / "loose.rst.txt").exists()
+        assert not (
+            Path(app.outdir) / "_sources" / "methods" / "loose.rst.txt"
+        ).exists()
         assert "methods/loose" not in app.env.found_docs
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
@@ -144,7 +150,7 @@ class TestRebuild:
 
         assert not (site / "methods" / "loose.rst").exists()
         assert "example.org" not in app.warning.getvalue()
-        files, trees = clean_build(make_app, site, tmp_path)
+        files = clean_build(make_app, site, tmp_path)[0]
         assert output_files(app) == files
 
     def test_a_file_added_gives_its_resources_pages_as_in_a_clean_build(
