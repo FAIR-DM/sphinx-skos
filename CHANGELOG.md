@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [v0.3.1] - 2026-10-28
+
 ### Fixed
 
 - A rebuild after the extension is upgraded rereads every page, so it gives what a clean build
