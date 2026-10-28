@@ -2,7 +2,7 @@
 name = "sphinx-skos"
 description = "A Sphinx extension that builds SKOS vocabularies into a documentation site, one page per concept"
 license = "MIT"
-version = "0.3.0"
+version = "0.3.1"
 readme = "README.md"
 authors = [{ name = "Sam", email = "samuel.scott.jennings@gmail.com" }]
 requires-python = ">=3.12"

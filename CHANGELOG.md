@@ -13,6 +13,13 @@ All notable changes to this project are recorded here. The format follows
   installs a list of packages or the repository's own uv dependency group, and can build without
   deploying. The built site is uploaded as the `github-pages` artifact.
 
+## [v0.3.1] - 2026-10-28
+
+### Fixed
+
+- A rebuild after the extension is upgraded rereads every page, so it gives what a clean build
+  gives. Before, an incremental build kept the pages the previous version had rendered.
+
 ## [v0.3.0] - 2026-10-28
 
 ### Changed

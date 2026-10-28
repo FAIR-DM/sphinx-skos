@@ -104,11 +104,12 @@ def find_outdated(
     changed: set[str],
     removed: set[str],
 ) -> list[str]:
-    """Name every document as outdated when the vocabulary files changed.
+    """Name every document as outdated when the vocabulary files or the extension changed.
 
     A page's text names only its resource, so Sphinx cannot see that a
-    vocabulary file changed. The fingerprint of the files is kept with the
-    environment and compared on every build.
+    vocabulary file changed, or that another version of the extension would
+    render it differently. The fingerprint of the files and the extension's
+    version are kept with the environment and compared on every build.
 
     Args:
         app: The Sphinx application building the site.
@@ -118,14 +119,18 @@ def find_outdated(
         removed: The documents Sphinx found removed.
 
     Returns:
-        Every document of the site if the fingerprint differs from the last
-        build's, otherwise none.
+        Every document of the site if the fingerprint or the version differs
+        from the last build's, otherwise none.
     """
     domain = cast(SKOSDomain, env.domains["skos"])
     fingerprint = domain.vocabularies.fingerprint
-    if domain.data["fingerprint"] == fingerprint:
+    if (domain.data["fingerprint"], domain.data.get("version")) == (
+        fingerprint,
+        __version__,
+    ):
         return []
     domain.data["fingerprint"] = fingerprint
+    domain.data["version"] = __version__
     return sorted(env.found_docs)
 
 

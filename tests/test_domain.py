@@ -2,9 +2,11 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path
 
+import pytest
 from sphinx import addnodes
 from sphinx.testing.util import SphinxTestApp
 
+import sphinx_skos
 from sphinx_skos.domain import SKOSDomain
 from sphinx_skos.pages import MARKER
 
@@ -166,6 +168,23 @@ class TestRebuild:
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
+
+    def test_a_rebuild_with_another_extension_version_rereads_every_page(
+        self,
+        make_app: MakeApp,
+        rootdir: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        site = copy_site(rootdir, tmp_path)
+        first = build(make_app, site)
+        read_at = dict(first.env.all_docs)
+        monkeypatch.setattr(sphinx_skos, "__version__", "0.0.0-other")
+
+        app = build(make_app, site)
+
+        assert read_at
+        assert all(app.env.all_docs[name] > read_at[name] for name in read_at)
 
     def test_an_unchanged_rebuild_rewrites_no_generated_source(
         self, make_app: MakeApp, rootdir: Path, tmp_path: Path
