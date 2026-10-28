@@ -1,0 +1,124 @@
+name: Build site
+
+# A reusable workflow that builds a sphinx-skos site with the dirhtml builder and
+# deploys it to GitHub Pages. A repository calls it from a job of its own:
+#
+#   jobs:
+#     site:
+#       uses: FAIR-DM/sphinx-skos/.github/workflows/build-site.yml@v0.3.0
+#       permissions:
+#         contents: read
+#         pages: write
+#         id-token: write
+#
+# docs/how-to/publish-a-site-to-github-pages.md describes every input.
+
+on:
+  workflow_call:
+    inputs:
+      docs-dir:
+        description: The directory that holds the site's conf.py.
+        type: string
+        default: docs
+      python-version:
+        description: The Python version to build with.
+        type: string
+        default: "3.13"
+      packages:
+        description: >-
+          The packages to install, as requirement specifiers separated by spaces,
+          such as "sphinx-skos==0.3.0 furo". Not used when dependency-group is set.
+        type: string
+        default: sphinx-skos
+      dependency-group:
+        description: >-
+          A dependency group in the repository's pyproject.toml. When set, the
+          repository's dependencies and that group are installed from its uv.lock
+          instead of packages.
+        type: string
+        default: ""
+      deploy:
+        description: >-
+          Whether to deploy the site after building it. Set it to false to build
+          the site and upload it as the github-pages artifact only.
+        type: boolean
+        default: true
+    outputs:
+      page-url:
+        description: The address of the deployed site. Empty when deploy is false.
+        value: ${{ jobs.deploy.outputs.page-url }}
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      # --locked fails the job when uv.lock is out of date with pyproject.toml.
+      - name: Install the dependency group
+        if: inputs.dependency-group != ''
+        env:
+          GROUP: ${{ inputs.dependency-group }}
+        run: |
+          uv sync --locked --no-default-groups --group "$GROUP"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      # The environment sits outside the checkout, so nothing in the repository is
+      # read as a project to install.
+      - name: Install packages
+        if: inputs.dependency-group == ''
+        env:
+          PACKAGES: ${{ inputs.packages }}
+        run: |
+          uv venv "$RUNNER_TEMP/venv"
+          # PACKAGES is split into one argument per specifier.
+          # shellcheck disable=SC2086
+          uv pip install --python "$RUNNER_TEMP/venv" $PACKAGES
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      # -W turns warnings into errors, so a resource that cannot get a page fails
+      # the build. --keep-going reports every warning before it does.
+      - name: Build
+        env:
+          DOCS_DIR: ${{ inputs.docs-dir }}
+        run: sphinx-build -b dirhtml -W --keep-going "$DOCS_DIR" "$RUNNER_TEMP/site"
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    name: Deploy site
+    if: inputs.deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    # One deployment at a time. A deployment in progress is never cancelled.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page-url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
