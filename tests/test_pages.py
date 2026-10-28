@@ -246,6 +246,25 @@ class TestHiddenSiteDocuments:
         assert "shown" in app.env.found_docs
 
 
+class TestSiteSourceEncoding:
+    def test_a_site_source_that_is_not_utf8_does_not_stop_the_build(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+        (site / "latin.rst").write_bytes(
+            ":orphan:\n\nCaf\xe9\n====\n".encode("latin-1")
+        )
+
+        app = make_app(
+            "dirhtml", srcdir=site, confoverrides={"source_encoding": "latin-1"}
+        )
+        app.build()
+
+        assert {"latin", "date-types"} <= app.env.found_docs
+
+
 class TestSourceSuffix:
     @pytest.mark.sphinx("dirhtml", testroot="suffix")
     def test_pages_use_the_suffix_of_the_sites_restructuredtext_files(
@@ -273,7 +292,6 @@ class TestSourceSuffix:
         ]
         assert len(lines) == 1
         assert generated_sources(Path(app.srcdir)) == []
-
 
     @pytest.mark.sphinx(
         "dirhtml",

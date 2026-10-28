@@ -12,7 +12,7 @@ from sphinx.util.typing import ExtensionMetadata
 
 from sphinx_skos.copies import RdfCopies
 from sphinx_skos.domain import SKOSDomain
-from sphinx_skos.pages import MARKER, GeneratedPages
+from sphinx_skos.pages import GeneratedPages
 from sphinx_skos.vocabularies import Vocabularies
 
 __version__ = version("sphinx-skos")
@@ -25,8 +25,8 @@ def find_site_documents(app: Sphinx) -> set[str]:
         app: The Sphinx application building the site.
 
     Returns:
-        The names of the documents in the source directory whose files do not
-        start with the marker.
+        The names of the documents in the source directory whose files the
+        extension did not write.
     """
     project = Project(app.srcdir, app.config.source_suffix)
     builder: Builder = app.builder
@@ -39,9 +39,7 @@ def find_site_documents(app: Sphinx) -> set[str]:
     return {
         docname
         for docname in documents
-        if not project.doc2path(docname, absolute=True)
-        .read_text(encoding="utf-8")
-        .startswith(MARKER)
+        if not GeneratedPages.is_generated(project.doc2path(docname, absolute=True))
     }
 
 
