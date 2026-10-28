@@ -1,0 +1,11 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://elsewhere.example.com/terms/outside> a skos:Concept .
+<https://example.org/vocab/> a skos:Concept .
+<https://example.org/vocab/date-types#fragment> a skos:Concept .
+<https://example.org/vocab/date-types?query=1> a skos:Concept .
+<https://example.org/vocab/back\slash> a skos:Concept .
+<https://example.org/vocab/up/../out> a skos:Concept .
+<https://example.org/vocab/dot/./in> a skos:Concept .
+<https://example.org/vocab/empty//segment> a skos:Concept .
+<https://example.org/vocab//rooted> a skos:Concept .

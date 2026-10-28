@@ -42,6 +42,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.22",
+    "types-docutils>=0.23.0.20260923",
 ]
 
 [build-system]
@@ -81,3 +82,7 @@ show_error_codes = true
 
 [tool.deptry]
 extend_exclude = ["tests/", "docs/"]
+
+# Sphinx requires docutils and fixes its version, so the extension does not repeat it.
+[tool.deptry.per_rule_ignores]
+DEP003 = ["docutils"]

@@ -165,3 +165,37 @@ class TestVocabulariesFingerprint:
         after = Vocabularies([str(vocabulary)], app.confdir).fingerprint
 
         assert before != after
+
+
+class TestVocabulariesTitle:
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_title_is_the_preferred_label_in_the_sites_language(
+        self, app: SphinxTestApp
+    ) -> None:
+        vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+
+        assert vocabularies.title(BASE + "date-types", "de") == "Datumstypen"
+        assert vocabularies.title(BASE + "date-types", "en") == "Date types"
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_without_a_label_in_that_language_the_first_by_tag_then_text_is_used(
+        self, app: SphinxTestApp, tmp_path: Path
+    ) -> None:
+        concept = tmp_path / "concept.ttl"
+        concept.write_text(
+            f'<{BASE}c> <{SKOS}prefLabel> "Zebra"@fr, "Alpha"@nl, "Beta"@fr .\n',
+            encoding="utf-8",
+        )
+        vocabularies = Vocabularies([str(concept)], app.confdir)
+
+        assert vocabularies.title(BASE + "c", "en") == "Beta"
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_without_a_preferred_label_the_title_is_the_uri(
+        self, app: SphinxTestApp, tmp_path: Path
+    ) -> None:
+        concept = tmp_path / "concept.ttl"
+        concept.write_text(f"<{BASE}c> a <{SKOS}Concept> .\n", encoding="utf-8")
+        vocabularies = Vocabularies([str(concept)], app.confdir)
+
+        assert vocabularies.title(BASE + "c", "en") == BASE + "c"

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from rdflib import RDF, Graph, Namespace
+from rdflib.term import Literal as RDFLiteral
 from rdflib.term import URIRef
 from sphinx.util import logging
 
@@ -34,16 +35,19 @@ class Vocabularies:
         confdir: The directory holding the site's ``conf.py``.
 
     Attributes:
+        patterns: The glob patterns the files were found with.
         graph: Every statement of every file that could be read.
         fingerprint: A SHA-256 digest of the path and bytes of each file read.
         resources: The kind of each vocabulary, concept and collection, by URI.
     """
 
+    patterns: list[str]
     graph: Graph
     fingerprint: str
     resources: dict[str, Kind]
 
     def __init__(self, patterns: Sequence[str], confdir: str | Path) -> None:
+        self.patterns = list(patterns)
         self.graph = Graph()
         digest = hashlib.sha256()
         for path in self.find_files(patterns, confdir):
@@ -111,3 +115,27 @@ class Vocabularies:
                     if isinstance(subject, URIRef):
                         resources[str(subject)] = kind
         return resources
+
+    def title(self, uri: str, language: str) -> str:
+        """Return the title of a resource.
+
+        The title is the preferred label in ``language``. Failing that it is
+        the first preferred label by language tag, then text. Failing that it
+        is the URI.
+
+        Args:
+            uri: The resource's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The text to title the resource's page and links to it with.
+        """
+        labels = sorted(
+            (label.language or "", str(label))
+            for label in self.graph.objects(URIRef(uri), SKOS.prefLabel)
+            if isinstance(label, RDFLiteral)
+        )
+        for tag, text in labels:
+            if tag.lower() == language.lower():
+                return text
+        return labels[0][1] if labels else uri
