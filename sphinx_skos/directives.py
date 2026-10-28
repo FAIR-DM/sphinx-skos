@@ -4,12 +4,22 @@ import re
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from docutils import nodes
+from rdflib import DCTERMS, OWL, RDFS
+from rdflib.term import BNode, Node, URIRef
+from rdflib.term import Literal as RDFLiteral
 from sphinx import addnodes
 from sphinx.locale import get_translation
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxDirective
 
-from sphinx_skos.vocabularies import Kind, Label, Target, Vocabularies
+from sphinx_skos.vocabularies import (
+    MAPPING_PROPERTIES,
+    SKOS,
+    Kind,
+    Label,
+    Target,
+    Vocabularies,
+)
 
 if TYPE_CHECKING:
     from sphinx_skos.domain import SKOSDomain
@@ -24,6 +34,7 @@ SCHEME = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*):")
 IGNORED_BY_BROWSERS = re.compile(r"[\x00-\x20]")
 
 type Facts = list[tuple[str, list[list[nodes.Node]]]]
+type Properties = list[tuple[str, URIRef]]
 
 
 class ResourceDirective(SphinxDirective):
@@ -33,6 +44,11 @@ class ResourceDirective(SphinxDirective):
     optional_arguments = 0
     has_content = False
     kind: ClassVar[Kind]
+    # The properties the kind's own fields show, which the other properties
+    # leave out.
+    shown: ClassVar[frozenset[URIRef]] = frozenset(
+        {SKOS.prefLabel, SKOS.altLabel, SKOS.definition}
+    )
 
     @property
     def vocabularies(self) -> Vocabularies:
@@ -65,21 +81,38 @@ class ResourceDirective(SphinxDirective):
         return [section]
 
     def fields(self, uri: str) -> nodes.field_list:
-        """Return the facts of the resource, one field for each kind of fact.
+        """Return the statements of the resource, one field for each kind of fact.
 
         Args:
             uri: The resource's URI.
 
         Returns:
-            A field list with a field only where the resource has a value,
-            except the URI, which is always there.
+            A field list with the URI, then the facts of the resource, then its
+            metadata, then every other property it states. A field is there
+            only where the resource has a value, except the URI, which always
+            is.
         """
+        subject = URIRef(uri)
         field_list = nodes.field_list(
             "", self.field(translate("URI"), [nodes.Text(uri)])
         )
-        field_list += [
-            self.field(name, *values) for name, values in self.facts(uri) if values
+        facts = [
+            *self.facts(uri),
+            *self.property_facts(subject, self.metadata_properties()),
         ]
+        field_list += [self.field(name, *values) for name, values in facts if values]
+        shown = (
+            ResourceDirective.shown
+            | self.shown
+            | {
+                predicate
+                for _, predicate in (
+                    *self.text_properties(),
+                    *self.metadata_properties(),
+                )
+            }
+        )
+        field_list += self.other_fields(subject, shown, frozenset())
         return field_list
 
     def facts(self, uri: str) -> Facts:
@@ -105,7 +138,138 @@ class ResourceDirective(SphinxDirective):
                 translate("Definitions"),
                 self.label_values(vocabularies.definitions(uri)),
             ),
+            *self.property_facts(URIRef(uri), self.text_properties()),
         ]
+
+    def text_properties(self) -> Properties:
+        """Return the properties that say what a resource is, shown after its labels.
+
+        Returns:
+            The name of each field and the property it shows.
+        """
+        return [
+            (translate("Titles"), DCTERMS.title),
+            (translate("Descriptions"), DCTERMS.description),
+            (translate("Notations"), SKOS.notation),
+            (translate("Scope notes"), SKOS.scopeNote),
+            (translate("Notes"), SKOS.note),
+            (translate("Examples"), SKOS.example),
+            (translate("History notes"), SKOS.historyNote),
+            (translate("Editorial notes"), SKOS.editorialNote),
+            (translate("Change notes"), SKOS.changeNote),
+        ]
+
+    def metadata_properties(self) -> Properties:
+        """Return the properties that say who made a resource, when and on what terms.
+
+        Returns:
+            The name of each field and the property it shows.
+        """
+        return [
+            (translate("Creators"), DCTERMS.creator),
+            (translate("Contributors"), DCTERMS.contributor),
+            (translate("Publishers"), DCTERMS.publisher),
+            (translate("Created"), DCTERMS.created),
+            (translate("Issued"), DCTERMS.issued),
+            (translate("Modified"), DCTERMS.modified),
+            (translate("Version"), OWL.versionInfo),
+            (translate("Licence"), DCTERMS.license),
+            (translate("Rights"), DCTERMS.rights),
+            (translate("Identifiers"), DCTERMS.identifier),
+            (translate("Languages"), DCTERMS.language),
+            (translate("Sources"), DCTERMS.source),
+            (translate("Citations"), DCTERMS.bibliographicCitation),
+            (translate("See also"), RDFS.seeAlso),
+        ]
+
+    def property_facts(self, subject: URIRef, properties: Properties) -> Facts:
+        """Return a fact for each property, holding what the resource states.
+
+        Args:
+            subject: The resource's URI.
+            properties: The name of each fact and the property it shows.
+
+        Returns:
+            The name and the paragraphs of each fact.
+        """
+        statements = self.vocabularies.statements(subject)
+        return [
+            (name, self.values(statements.get(predicate, []), frozenset()))
+            for name, predicate in properties
+        ]
+
+    def other_fields(
+        self, subject: Node, shown: frozenset[URIRef], seen: frozenset[BNode]
+    ) -> list[nodes.field]:
+        """Return a field for each property no other field shows.
+
+        Each field is named by the property's prefixed name, linked to the
+        property's URI.
+
+        Args:
+            subject: The resource's URI, or a blank node it reaches.
+            shown: The properties left out, because other fields show them.
+            seen: The blank nodes already being shown, so a cycle ends.
+
+        Returns:
+            The fields, sorted by prefixed name and then URI.
+        """
+        vocabularies = self.vocabularies
+        statements = vocabularies.statements(subject)
+        predicates = sorted(
+            (predicate for predicate in statements if predicate not in shown),
+            key=lambda predicate: (vocabularies.curie(predicate), str(predicate)),
+        )
+        return [
+            self.field(
+                self.uri_reference(str(predicate), vocabularies.curie(predicate)),
+                *self.values(statements[predicate], seen),
+            )
+            for predicate in predicates
+        ]
+
+    def values(
+        self, values: list[Node], seen: frozenset[BNode]
+    ) -> list[list[nodes.Node]]:
+        """Return the nodes that show each object of a property.
+
+        Args:
+            values: The objects.
+            seen: The blank nodes already being shown, so a cycle ends.
+
+        Returns:
+            For each object in the order shown: a link for a URI, the text and
+            then the language tag or datatype for a literal, and a field list
+            of its own statements for a blank node.
+        """
+        shown = []
+        for value in self.vocabularies.sort_values(values, self.config.language):
+            if isinstance(value, URIRef):
+                shown.append(self.link(str(value)))
+            elif isinstance(value, RDFLiteral):
+                shown.append(self.literal_value(value))
+            elif isinstance(value, BNode) and value not in seen:
+                fields = self.other_fields(value, frozenset(), seen | {value})
+                shown.append([nodes.field_list("", *fields)])
+        return shown
+
+    def literal_value(self, literal: RDFLiteral) -> list[nodes.Node]:
+        """Return the text of a literal, then its language tag or datatype.
+
+        Args:
+            literal: The literal.
+
+        Returns:
+            The text, followed by the tag in a text node of its own when the
+            literal has one.
+        """
+        text = nodes.Text(str(literal))
+        if literal.language:
+            return [text, nodes.Text(f" ({literal.language})")]
+        if literal.datatype:
+            datatype = self.vocabularies.curie(str(literal.datatype))
+            return [text, nodes.Text(f" ({datatype})")]
+        return [text]
 
     def link(self, uri: str) -> list[nodes.Node]:
         """Return the nodes that show a resource and, where safe, link to it.
@@ -115,26 +279,39 @@ class ResourceDirective(SphinxDirective):
 
         Returns:
             A cross-reference to the page of the resource when it has one,
-            else a link to the URI, else plain text for a URI that runs code or
-            carries data when followed.
+            else a link to the URI by the name the files give it, else plain
+            text for a URI that runs code or carries data when followed.
         """
-        scheme = SCHEME.match(IGNORED_BY_BROWSERS.sub("", uri))
-        if scheme and scheme.group(1).lower() in UNLINKED_SCHEMES:
-            return [nodes.Text(uri)]
+        name = self.vocabularies.name(uri, self.config.language)
         docname = self.pages.docname_for(uri)
         if docname is None:
-            return [nodes.reference("", uri, refuri=uri)]
-        title = self.vocabularies.title(uri, self.config.language)
+            return [self.uri_reference(uri, name)]
         return [
             addnodes.pending_xref(
                 "",
-                nodes.Text(title),
+                nodes.Text(name),
                 refdomain="std",
                 reftype="doc",
                 reftarget="/" + docname,
                 refexplicit=True,
             )
         ]
+
+    def uri_reference(self, uri: str, text: str) -> nodes.Node:
+        """Return a link to a URI, or plain text where following it is unsafe.
+
+        Args:
+            uri: The URI to link to.
+            text: The text to show.
+
+        Returns:
+            A reference, or the text alone for a URI that runs code or carries
+            data when followed.
+        """
+        scheme = SCHEME.match(IGNORED_BY_BROWSERS.sub("", uri))
+        if scheme and scheme.group(1).lower() in UNLINKED_SCHEMES:
+            return nodes.Text(text)
+        return nodes.reference("", text, refuri=uri)
 
     def links(self, uris: list[str]) -> list[list[nodes.Node]]:
         """Return the nodes of a link for each URI.
@@ -147,19 +324,26 @@ class ResourceDirective(SphinxDirective):
         """
         return [self.link(uri) for uri in uris]
 
-    def field(self, name: str, *values: list[nodes.Node]) -> nodes.field:
+    def field(self, name: str | nodes.Node, *values: list[nodes.Node]) -> nodes.field:
         """Return a field with one paragraph for each value.
 
         Args:
-            name: The field's name, already translated.
-            *values: The nodes of each paragraph.
+            name: The field's name, already translated, or the nodes of a link.
+            *values: The nodes of each paragraph. A value that is a field list
+                is placed as it is, not in a paragraph.
 
         Returns:
             The field.
         """
-        paragraphs = [nodes.paragraph("", "", *value) for value in values]
+        body = [
+            value[0]
+            if len(value) == 1 and isinstance(value[0], nodes.field_list)
+            else nodes.paragraph("", "", *value)
+            for value in values
+        ]
+        title = name if isinstance(name, nodes.Node) else nodes.Text(name)
         return nodes.field(
-            "", nodes.field_name("", name), nodes.field_body("", *paragraphs)
+            "", nodes.field_name("", "", title), nodes.field_body("", *body)
         )
 
     def target_links(self, targets: list[Target]) -> list[list[nodes.Node]]:
@@ -199,9 +383,10 @@ class VocabularyDirective(ResourceDirective):
     """Show a vocabulary."""
 
     kind = "vocabulary"
+    shown = frozenset({SKOS.hasTopConcept})
 
     def facts(self, uri: str) -> Facts:
-        """Add the descriptions, concepts and collections of the vocabulary.
+        """Add the concepts and collections of the vocabulary.
 
         Args:
             uri: The vocabulary's URI.
@@ -213,10 +398,6 @@ class VocabularyDirective(ResourceDirective):
         language = self.config.language
         return [
             *super().facts(uri),
-            (
-                translate("Descriptions"),
-                self.label_values(vocabularies.descriptions(uri)),
-            ),
             (
                 translate("Concepts"),
                 self.links(vocabularies.concepts_in(uri, language)),
@@ -232,9 +413,19 @@ class ConceptDirective(ResourceDirective):
     """Show a concept."""
 
     kind = "concept"
+    shown = frozenset(
+        {
+            SKOS.inScheme,
+            SKOS.topConceptOf,
+            SKOS.broader,
+            SKOS.narrower,
+            SKOS.related,
+            *(SKOS[name] for name in MAPPING_PROPERTIES),
+        }
+    )
 
     def facts(self, uri: str) -> Facts:
-        """Add the notations and the links of the concept.
+        """Add the links of the concept.
 
         Args:
             uri: The concept's URI.
@@ -253,10 +444,6 @@ class ConceptDirective(ResourceDirective):
         }
         return [
             *super().facts(uri),
-            (
-                translate("Notations"),
-                [[nodes.Text(text)] for text in vocabularies.notations(uri)],
-            ),
             (
                 translate("Vocabulary"),
                 self.links(vocabularies.vocabularies_of(uri, language)),
@@ -288,6 +475,7 @@ class CollectionDirective(ResourceDirective):
     """Show a collection."""
 
     kind = "collection"
+    shown = frozenset({SKOS.member, SKOS.memberList})
 
     def facts(self, uri: str) -> Facts:
         """Add the members of the collection.
