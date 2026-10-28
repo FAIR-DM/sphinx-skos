@@ -146,7 +146,6 @@ class TestVocabulariesProblems:
         assert vocabularies.resources == {}
         assert len(vocabularies.graph) == 0
 
-
     @pytest.mark.sphinx("dirhtml", testroot="unreadable")
     def test_a_member_list_that_loops_keeps_its_members_and_names_the_collection(
         self, app: SphinxTestApp, tmp_path: Path
@@ -389,15 +388,14 @@ class TestVocabulariesOwnRdf:
 
         assert (URIRef(BASE + "rel/col-a"), RDF.type, SKOS.OrderedCollection) in own
         assert (None, SKOS.member, URIRef(BASE + "rel/r1")) not in own
-        assert set(own.subjects()) - {URIRef(BASE + "rel/col-a")} <= set(
-            own.objects()
-        )
+        assert set(own.subjects()) - {URIRef(BASE + "rel/col-a")} <= set(own.objects())
 
     def test_own_rdf_keeps_the_files_namespace_prefixes(
         self, vocabularies: Vocabularies
     ) -> None:
         own = vocabularies.own_rdf(BASE + "rel/hub")
 
-        assert dict(own.namespaces())["skos"] == dict(vocabularies.graph.namespaces())[
-            "skos"
-        ]
+        assert (
+            dict(own.namespaces())["skos"]
+            == dict(vocabularies.graph.namespaces())["skos"]
+        )

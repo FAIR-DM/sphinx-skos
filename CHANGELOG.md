@@ -13,6 +13,9 @@ All notable changes to this project are recorded here. The format follows
 - A generated page for every vocabulary, concept and collection, at its URI with the base URI
   removed. A page is titled with its resource. A resource that cannot get a page is named in a
   build warning.
+- Four RDF copies beside every generated page, in Turtle, JSON-LD, RDF/XML and N-Triples, holding
+  that resource's own RDF. Each page's head names them with `<link rel="alternate">` elements. The
+  copy names are permanent. A removed resource's copies are removed with its page.
 - The `skos` domain, with the `skos:vocabulary`, `skos:concept` and `skos:collection`
   directives.
 

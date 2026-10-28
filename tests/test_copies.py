@@ -1,5 +1,6 @@
 import shutil
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,41 @@ ADDRESSES = [
     "methods/loose",
 ]
 FORMATS = {".ttl": "turtle", ".jsonld": "json-ld", ".rdf": "xml", ".nt": "nt"}
+MEDIA_TYPES = {
+    ".ttl": "text/turtle",
+    ".jsonld": "application/ld+json",
+    ".rdf": "application/rdf+xml",
+    ".nt": "application/n-triples",
+}
+
+
+class AlternateLinks(HTMLParser):
+    """Collect the alternate links in a page's head."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[dict[str, str | None]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        if tag == "link" and values.get("rel") == "alternate":
+            self.links.append(values)
+
+
+def alternate_links(page: Path) -> list[dict[str, str | None]]:
+    """Return the alternate links of a built page."""
+    parser = AlternateLinks()
+    parser.feed(page.read_text(encoding="utf-8"))
+    return parser.links
+
+
+def copy_names(outdir: Path) -> list[str]:
+    """Return the sorted paths of every RDF copy under a built site."""
+    return sorted(
+        path.relative_to(outdir).as_posix()
+        for path in outdir.rglob("*")
+        if path.suffix in FORMATS
+    )
 
 
 def read_files(rootdir: Path) -> Graph:
@@ -183,3 +219,58 @@ class TestRdfCopies:
         for suffix in FORMATS:
             assert not copy_file(rebuilt, "methods/loose", suffix).exists()
         assert not (Path(rebuilt.outdir) / "methods" / "loose").exists()
+
+
+class TestAlternateLinks:
+    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    def test_every_generated_page_names_each_copy_in_its_head(
+        self, make_app: MakeApp, rootdir: Path, tmp_path: Path, theme: str
+    ) -> None:
+        site = tmp_path / theme
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+        app = make_app("dirhtml", srcdir=site, confoverrides={"html_theme": theme})
+        app.build()
+
+        for address in ADDRESSES:
+            page = Path(app.builder.get_outfilename(address))
+            links = alternate_links(page)
+            assert {link["type"]: link["href"] for link in links} == {
+                media_type: f"index{suffix}"
+                for suffix, media_type in MEDIA_TYPES.items()
+            }
+            assert len(links) == len(MEDIA_TYPES)
+            for link in links:
+                assert (page.parent / str(link["href"])).is_file()
+
+    @pytest.mark.sphinx("html", testroot="vocabularies")
+    def test_under_html_each_link_names_the_copy_beside_the_file(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        page = Path(app.builder.get_outfilename("date-types/available"))
+        assert {link["href"] for link in alternate_links(page)} == {
+            f"available{suffix}" for suffix in FORMATS
+        }
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_page_the_site_wrote_names_no_copy(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert alternate_links(Path(app.builder.get_outfilename("index"))) == []
+
+    def test_two_builds_of_unchanged_files_give_the_same_copies(
+        self, make_app: MakeApp, rootdir: Path, tmp_path: Path
+    ) -> None:
+        names = []
+        for name in ("first", "second"):
+            site = tmp_path / name
+            shutil.copytree(rootdir / "test-vocabularies", site)
+            shutil.rmtree(site / "problems")
+            app = make_app("dirhtml", srcdir=site)
+            app.build()
+            names.append(copy_names(Path(app.outdir)))
+
+        assert names[0] == names[1]
+        assert len(names[0]) == len(ADDRESSES) * len(FORMATS)

@@ -27,7 +27,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `write_copies(app, pagename, templatename, context, doctree)`
 : Connected to Sphinx's `html-page-context` event. For a page the extension generated, under a
-  builder that writes HTML, it writes the page's RDF copies and adds an
+  builder that writes HTML, it writes the page's [RDF copies](rdf-copies.md) and adds an
   `<link rel="alternate">` element for each to the page's `metatags`. Other pages are left alone.
 
 `find_site_documents(app)`
@@ -90,7 +90,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
 ## Module `sphinx_skos.copies`
 
 `RdfCopies(vocabularies)`
-: Writes the RDF copies of a page. `write(uri, outfile)` serialises a resource's
+: Writes the [RDF copies](rdf-copies.md) of a page. `write(uri, outfile)` serialises a resource's
   own RDF in every format beside the page's output file, `paths(outfile)` says where the copies
   of a page are and `alternate_links(outfile)` gives the `<link rel="alternate">` elements that
   name them.

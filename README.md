@@ -29,8 +29,9 @@ makes it look.
 ## Status
 
 Early. The package reads your vocabulary files and writes one Sphinx page for every vocabulary,
-concept and collection, each titled with the resource's label. The rest of each page, the RDF
-copies beside it and the directives for your own pages are still to come.
+concept and collection, each with its facts and links, and writes that resource's own RDF beside
+it in Turtle, JSON-LD, RDF/XML and N-Triples, named in the page's head with `<link rel="alternate">`
+elements. The directives for your own pages are still to come.
 
 ## Usage
 
@@ -50,7 +51,9 @@ sphinx-build -b dirhtml docs docs/_build/dirhtml
 A concept's page lives at its URI with `skos_base_uri` removed, so a redirect from the URI's
 domain to the site maps one address directly onto the other. See [Publish vocabulary files as a
 site](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/how-to/publish-vocabulary-files.md)
-for the steps and
+for the steps, [RDF
+copies](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/rdf-copies.md) for the
+files written beside each page and
 [Settings](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/settings.md) for what
 each setting accepts.
 
