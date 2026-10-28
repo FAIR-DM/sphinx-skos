@@ -38,8 +38,8 @@ generates no page.
 A resource gets a build warning naming it, and no page, when:
 
 - its URI does not start with the base URI,
-- its page address is empty, holds `#`, `?` or `\`, starts with `/`, or has an empty, `.` or `..`
-  segment,
+- its page address is empty, holds `#`, `?`, `\`, whitespace or a control character, starts with
+  `/`, or has an empty, `.` or `..` segment,
 - its page address is already used by a document of the site's own, or by a resource whose URI
   sorts first. `a` and `a/index` are the same address, and an address ending in `/` is the
   directory of that name.
