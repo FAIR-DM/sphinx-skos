@@ -743,7 +743,7 @@ class TestEveryProperty:
         app.build()
 
         values = ["2024-01-02", "2024-02-03", "2024-05-01", "1.2.0", "PROP-1"]
-        fields = [id(field_of(app, "prop", value)) for value in values]
+        fields = [field_of(app, "prop", value).astext() for value in values]
         assert len(set(fields)) == len(values)
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
