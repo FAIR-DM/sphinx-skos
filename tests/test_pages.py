@@ -262,6 +262,18 @@ class TestSourceSuffix:
         assert generated_sources(Path(app.srcdir)) == []
 
 
+    @pytest.mark.sphinx(
+        "dirhtml",
+        testroot="suffix",
+        srcdir="suffix-without-restructuredtext-or-vocabularies",
+        confoverrides={"source_suffix": {".txt": "markdown"}, "skos_vocabularies": []},
+    )
+    def test_a_site_with_no_vocabulary_files_needs_no_restructuredtext_suffix(
+        self, app: SphinxTestApp
+    ) -> None:
+        assert "source_suffix" not in app.warning.getvalue()
+
+
 class TestMissingBaseUri:
     @pytest.mark.sphinx("dirhtml", testroot="no-base-uri")
     def test_no_page_is_generated_and_one_warning_names_the_setting(

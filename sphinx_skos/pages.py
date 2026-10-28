@@ -50,7 +50,12 @@ class GeneratedPages:
         self.docnames = {}
         self.uris = {}
         self.suffix = self.find_suffix(source_suffix)
-        if self.suffix is None or not self.has_base_uri(base_uri):
+        if not vocabularies.patterns:
+            return
+        if self.suffix is None:
+            logger.warning("source_suffix has no reStructuredText suffix: no pages")
+            return
+        if not self.has_base_uri(base_uri):
             return
         taken = {self.compare_key(docname) for docname in site_documents}
         for uri in sorted(vocabularies.resources):
@@ -76,13 +81,11 @@ class GeneratedPages:
             base_uri: The ``skos_base_uri`` setting.
 
         Returns:
-            Whether the base URI is set. A site that lists no vocabulary files
-            needs none.
+            Whether the base URI is set.
         """
         if base_uri:
             return True
-        if self.vocabularies.patterns:
-            logger.warning("skos_vocabularies is set but skos_base_uri is not")
+        logger.warning("skos_vocabularies is set but skos_base_uri is not")
         return False
 
     @staticmethod
@@ -93,12 +96,11 @@ class GeneratedPages:
             source_suffix: The site's ``source_suffix`` setting.
 
         Returns:
-            The suffix, or ``None`` after a warning if the site has none.
+            The suffix, or ``None`` if the site has none.
         """
         for suffix, parser in source_suffix.items():
             if parser == "restructuredtext":
                 return suffix
-        logger.warning("source_suffix has no reStructuredText suffix: no pages")
         return None
 
     @staticmethod

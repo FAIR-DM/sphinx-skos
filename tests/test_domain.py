@@ -129,6 +129,24 @@ class TestRebuild:
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
 
+    def test_a_site_that_drops_every_vocabulary_file_keeps_no_generated_page(
+        self, make_app: MakeApp, rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = copy_site(rootdir, tmp_path)
+        build(make_app, site)
+        conf = site / "conf.py"
+        conf.write_text(
+            conf.read_text(encoding="utf-8") + "\nskos_vocabularies = []\n",
+            encoding="utf-8",
+        )
+
+        app = build(make_app, site)
+
+        assert not (site / "methods" / "loose.rst").exists()
+        assert "example.org" not in app.warning.getvalue()
+        files, trees = clean_build(make_app, site, tmp_path)
+        assert output_files(app) == files
+
     def test_a_file_added_gives_its_resources_pages_as_in_a_clean_build(
         self, make_app: MakeApp, rootdir: Path, tmp_path: Path
     ) -> None:
