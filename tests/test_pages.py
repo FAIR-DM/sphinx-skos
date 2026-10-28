@@ -1,7 +1,11 @@
+import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from sphinx.testing.util import SphinxTestApp
+
+from sphinx_skos.pages import MARKER
 
 BASE = "https://example.org/vocab/"
 ADDRESSES = {
@@ -105,6 +109,24 @@ class TestGeneratedPages:
 
         assert app.env.toctree_includes["index"] == ["date-types"]
         assert app.warning.getvalue() == ""
+
+
+class TestCleanUp:
+    def test_a_file_without_the_marker_is_never_deleted(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+        own = site / "gone.rst"
+        own.write_text(":orphan:\n\nMine\n====\n", encoding="utf-8")
+        marked = site / "stale.rst"
+        marked.write_text(f"{MARKER}\n\n:orphan:\n", encoding="utf-8")
+
+        make_app("dirhtml", srcdir=site).build()
+
+        assert own.is_file()
+        assert not marked.exists()
 
 
 class TestUnusableAddresses:

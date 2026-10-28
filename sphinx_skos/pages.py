@@ -3,6 +3,8 @@
 from collections.abc import Collection, Mapping
 from pathlib import Path
 
+from sphinx.builders import Builder
+from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.util import logging
 
 from sphinx_skos.vocabularies import Kind, Vocabularies
@@ -174,3 +176,84 @@ class GeneratedPages:
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
+
+    def clean(
+        self,
+        srcdir: str | Path,
+        builder: Builder,
+        skip: Collection[str | Path],
+    ) -> None:
+        """Delete the generated sources whose resource is gone, and their output.
+
+        Only a file whose first line is the marker is touched. For an HTML
+        builder the page's output file and its copied source go too.
+
+        Args:
+            srcdir: The site's source directory.
+            builder: The builder of the current build.
+            skip: Directories the build writes into, left unread when they sit
+                inside the source directory.
+        """
+        if self.suffix is None:
+            return
+        source_root = Path(srcdir)
+        skipped = [Path(directory).resolve() for directory in skip]
+        current = set(self.docnames.values())
+        for path in sorted(source_root.rglob(f"*{self.suffix}")):
+            if any(path.resolve().is_relative_to(directory) for directory in skipped):
+                continue
+            docname = path.relative_to(source_root).as_posix().removesuffix(self.suffix)
+            if docname in current or not self.is_generated(path):
+                continue
+            path.unlink()
+            self.remove_output(docname, builder)
+
+    @staticmethod
+    def is_generated(path: Path) -> bool:
+        """Say whether a file was written by the extension.
+
+        Args:
+            path: A file in the source directory.
+
+        Returns:
+            Whether its first line is the marker.
+        """
+        try:
+            with path.open(encoding="utf-8") as source:
+                return source.readline().rstrip("\n") == MARKER
+        except (OSError, UnicodeDecodeError):
+            return False
+
+    def remove_output(self, docname: str, builder: Builder) -> None:
+        """Delete what an HTML builder wrote for a document that is gone.
+
+        Args:
+            docname: The removed document.
+            builder: The builder of the current build.
+        """
+        if not isinstance(builder, StandaloneHTMLBuilder):
+            return
+        copied = docname + (self.suffix or "")
+        if self.suffix != builder.config.html_sourcelink_suffix:
+            copied += builder.config.html_sourcelink_suffix
+        for path in (
+            Path(builder.get_outfilename(docname)),
+            Path(builder.outdir) / "_sources" / copied,
+        ):
+            path.unlink(missing_ok=True)
+            self.prune(path.parent, Path(builder.outdir))
+
+    @staticmethod
+    def prune(directory: Path, root: Path) -> None:
+        """Remove a directory and its parents while they are empty.
+
+        Args:
+            directory: The directory to start from.
+            root: The directory that is never removed.
+        """
+        while directory != root and root in directory.parents:
+            try:
+                directory.rmdir()
+            except OSError:
+                return
+            directory = directory.parent

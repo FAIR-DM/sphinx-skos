@@ -20,6 +20,11 @@ warnings take part in Sphinx's warning handling, including `-W`.
   works out a `GeneratedPages` from them, writes the page sources, and stores both on the
   `SKOSDomain`.
 
+`find_outdated(app, env, added, changed, removed)`
+: Connected to Sphinx's `env-get-outdated` event. When the fingerprint of the vocabulary files
+  differs from the one the environment was last read with, it stores the new one and names every
+  document of the site as outdated, so a rebuild gives what a clean build gives.
+
 `find_site_documents(app)`
 : The names of the site's own documents: every document in the source directory whose file does
   not start with the generated-page marker line.
@@ -39,13 +44,16 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `GeneratedPages(vocabularies, base_uri, source_suffix, site_documents)`
 : The page of every resource that can have one. `docname_for(uri)` gives a resource's document
-  name, or `None` when it has no page. `write(srcdir)` writes the page sources.
+  name, or `None` when it has no page. `write(srcdir)` writes the page sources. `clean(srcdir,
+  builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
+  their output file and copied source.
 
 ## Module `sphinx_skos.domain`
 
 `SKOSDomain`
 : The `skos` domain. It holds the three directives, and the `vocabularies` and `pages` of the
-  build in progress.
+  build in progress, and the `fingerprint` of the vocabulary files the environment was last read
+  with in its `data`.
 
 ## Module `sphinx_skos.directives`
 
