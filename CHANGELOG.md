@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [v0.2.0] - 2026-10-28
+
 ### Added
 
 - The `skos_vocabularies` and `skos_base_uri` settings. The vocabulary files they name are read
