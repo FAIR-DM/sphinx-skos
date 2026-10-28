@@ -22,6 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "docutils>=0.21",
     "rdflib>=7.6",
     "sphinx>=9.0",
 ]
@@ -82,7 +83,3 @@ show_error_codes = true
 
 [tool.deptry]
 extend_exclude = ["tests/", "docs/"]
-
-# Sphinx requires docutils and fixes its version, so the extension does not repeat it.
-[tool.deptry.per_rule_ignores]
-DEP003 = ["docutils"]
