@@ -71,3 +71,49 @@ be overruled at review of the specification.
 
 19. **Themes tested are the default (alabaster) and furo**, installed in the development
     dependencies. The success criteria name "one other theme" so the choice can change.
+
+## Planning
+
+## D20 — Generated pages are source files written into the site's source directory
+
+Sphinx reads every document from a file in the source directory and has no public way to add one
+without a file (research R1). The extension writes one small reStructuredText file per resource
+when the build starts, as `GOALS.md` and `sphinx.ext.autosummary` do, marks it as generated, and
+removes it with its output once its resource is gone. A site that keeps its sources under version
+control lists the generated files in `.gitignore`.
+
+**Why:** the only route without files goes through Sphinx's private document table.
+**Revisit if:** Sphinx gains a public way to provide a document without a file.
+
+## D21 — Every generated page is an orphan
+
+A concept in two vocabularies would be in two tables of contents, which Sphinx warns about, so
+generated pages are reached by links and by the site's own tables of contents, never by one the
+extension writes (research R3).
+
+## D22 — RDF copy names follow the page's HTML file
+
+Under `dirhtml` the copies are `index.ttl`, `index.jsonld`, `index.rdf` and `index.nt` in the
+page's directory, so a web server negotiating content on the directory finds them with no lookup
+table. Under `html` they are the page's file name with its suffix replaced (research R4).
+
+## D23 — A collection is in a vocabulary when it says so or when a member is
+
+Neither real vocabulary set states `skos:inScheme` on a collection. A vocabulary's page lists a
+collection that states `skos:inScheme` for it or has a member in it (research R9).
+
+## D24 — A vocabulary's description is shown beside its definition
+
+FR-012 asks for "its definition or description". Both real sets describe their vocabularies with
+`dcterms:description` only, so the vocabulary page shows `dcterms:description` as a field of its
+own, next to `skos:definition`.
+
+## D25 — A change to the vocabulary files rereads every document
+
+Rereading only the documents that use a directive would need a per-document record kept, merged
+and purged, to save rereading the site's few prose pages (research R2).
+
+## D26 — "Adds no static file" is held by review, not by a test
+
+A test listing the package's files records today's layout and fails for any new module. FR-024's
+build-under-any-theme half is tested (T006).
