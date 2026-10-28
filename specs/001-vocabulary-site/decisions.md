@@ -85,11 +85,15 @@ control lists the generated files in `.gitignore`.
 **Why:** the only route without files goes through Sphinx's private document table.
 **Revisit if:** Sphinx gains a public way to provide a document without a file.
 
+**ADR:** docs/adr/0001-generated-pages-are-source-files.md
+
 ## D21 — Every generated page is an orphan
 
 A concept in two vocabularies would be in two tables of contents, which Sphinx warns about, so
 generated pages are reached by links and by the site's own tables of contents, never by one the
 extension writes (research R3).
+
+**ADR:** none — follows from Sphinx's table-of-contents rules, and ADR 0001 records the page source that carries it
 
 ## D22 — RDF copy names follow the page's HTML file
 
@@ -97,10 +101,14 @@ Under `dirhtml` the copies are `index.ttl`, `index.jsonld`, `index.rdf` and `ind
 page's directory, so a web server negotiating content on the directory finds them with no lookup
 table. Under `html` they are the page's file name with its suffix replaced (research R4).
 
+**ADR:** docs/adr/0002-rdf-copy-names-follow-the-page-file.md
+
 ## D23 — A collection is in a vocabulary when it says so or when a member is
 
 Neither real vocabulary set states `skos:inScheme` on a collection. A vocabulary's page lists a
 collection that states `skos:inScheme` for it or has a member in it (research R9).
+
+**ADR:** none — a reading of SKOS local to the vocabulary page
 
 ## D24 — A vocabulary's description is shown beside its definition
 
@@ -108,21 +116,29 @@ FR-012 asks for "its definition or description". Both real sets describe their v
 `dcterms:description` only, so the vocabulary page shows `dcterms:description` as a field of its
 own, next to `skos:definition`.
 
+**ADR:** none — a page-content choice local to the vocabulary page
+
 ## D25 — A change to the vocabulary files rereads every document
 
 Rereading only the documents that use a directive would need a per-document record kept, merged
 and purged, to save rereading the site's few prose pages (research R2).
+
+**ADR:** none — an internal rebuild detail nothing downstream depends on
 
 ## D26 — "Adds no static file" is held by review, not by a test
 
 A test listing the package's files records today's layout and fails for any new module. FR-024's
 build-under-any-theme half is tested (T006).
 
+**ADR:** none — a testing choice for this feature
+
 ## D27 — Links to script URIs are shown as text
 
 A vocabulary file can come from another organisation. A link whose scheme is `javascript`, `data`
 or `vbscript` is shown as text, never as a link, because the HTML writer puts `refuri` into `href`
 unchanged. This narrows FR-014 only for schemes a browser runs.
+
+**ADR:** none — a safety rule inside the link code, documented in the directives reference
 
 ## D28 — Design review
 
@@ -132,3 +148,5 @@ builders (SPEC-003), order tests against an order the test computes (SPEC-004), 
 with `/index` removed and between generated pages (ARCH-001), script URIs not linked (SEC-001, D27),
 `\` refused in an address (SEC-002). Carried as a watch item for the code review: nothing adds a
 stylesheet, script or static file (SPEC-005, D26).
+
+**ADR:** none — a record of this feature's design review
