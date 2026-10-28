@@ -77,3 +77,9 @@ warnings take part in Sphinx's warning handling, including `-W`.
   its URI, preferred and alternative labels, definitions and notations. A field appears only when
   the concept has a value for it, and hidden labels are never shown. The names of the fields are
   translated through the `sphinx_skos` message catalogue.
+
+`translate`
+: The function the directives pass their fixed text through: `sphinx.locale.get_translation`
+  for the `sphinx_skos` catalogue. A site that registers a `sphinx_skos` catalogue with
+  `app.add_message_catalog` gets the field names in its `language`. To extract the messages with
+  babel, give `-k translate`.
