@@ -138,6 +138,10 @@ class GeneratedPages:
             not address
             or address.startswith("/")
             or any(character in address for character in UNUSABLE_CHARACTERS)
+            or any(
+                character.isspace() or not character.isprintable()
+                for character in address
+            )
             or any(segment in (".", "..") for segment in segments)
             or "" in segments[:-1]
         ):

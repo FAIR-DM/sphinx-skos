@@ -288,3 +288,19 @@ class TestMissingBaseUri:
         ]
         assert len(lines) == 1
         assert app.env.found_docs == {"index"}
+
+
+class TestControlCharacters:
+    @pytest.mark.sphinx("dirhtml", testroot="control-characters")
+    def test_a_uri_with_a_control_character_or_space_gets_no_page_and_is_named(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.found_docs - {"index"} == {"plain"}
+        assert [path.name for path in generated_sources(Path(app.srcdir))] == [
+            "plain.rst"
+        ]
+        warnings = app.warning.getvalue()
+        for start in ("carriage", "line", "with", "bell"):
+            assert BASE + start in warnings

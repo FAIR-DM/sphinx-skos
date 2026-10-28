@@ -1,0 +1,7 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/carriage\u000Dreturn> a skos:Concept .
+<https://example.org/vocab/line\u000Afeed> a skos:Concept .
+<https://example.org/vocab/with space> a skos:Concept .
+<https://example.org/vocab/bell\u0007> a skos:Concept .
+<https://example.org/vocab/plain> a skos:Concept .
