@@ -312,20 +312,28 @@ class Vocabularies:
     def listed_members(self, collection: str) -> list[str]:
         """Return the members an ordered collection lists, in list order.
 
+        A list that comes back round to itself is read up to that point and the
+        collection is named in a warning.
+
         Args:
             collection: The collection's URI.
 
         Returns:
             The listed URIs, each once. Empty without a ``skos:memberList``.
         """
-        head = self.graph.value(URIRef(collection), SKOS.memberList)
-        if head is None:
-            return []
-        return list(
-            dict.fromkeys(
-                str(item) for item in self.graph.items(head) if isinstance(item, URIRef)
-            )
-        )
+        node = self.graph.value(URIRef(collection), SKOS.memberList)
+        members: dict[str, None] = {}
+        seen = set()
+        while node is not None and node != RDF.nil:
+            if node in seen:
+                logger.warning("The member list of %s comes back round", collection)
+                break
+            seen.add(node)
+            item = self.graph.value(node, RDF.first)
+            if isinstance(item, URIRef):
+                members.setdefault(str(item), None)
+            node = self.graph.value(node, RDF.rest)
+        return list(members)
 
     def all_members(self, collection: str) -> set[str]:
         """Return every concept a collection names, listed or not.

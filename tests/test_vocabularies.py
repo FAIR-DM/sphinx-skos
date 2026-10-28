@@ -9,6 +9,7 @@ from sphinx_skos.vocabularies import Label, Target, Vocabularies
 
 BASE = "https://example.org/vocab/"
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
+RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 
 
 class TestVocabulariesLoading:
@@ -144,6 +145,26 @@ class TestVocabulariesProblems:
 
         assert vocabularies.resources == {}
         assert len(vocabularies.graph) == 0
+
+
+    @pytest.mark.sphinx("dirhtml", testroot="unreadable")
+    def test_a_member_list_that_loops_keeps_its_members_and_names_the_collection(
+        self, app: SphinxTestApp, tmp_path: Path
+    ) -> None:
+        looped = tmp_path / "looped.ttl"
+        looped.write_text(
+            f"<{BASE}ordered> a <{SKOS}OrderedCollection> ;\n"
+            f"    <{SKOS}memberList> _:first .\n"
+            f"_:first <{RDF}first> <{BASE}one> ; <{RDF}rest> _:second .\n"
+            f"_:second <{RDF}first> <{BASE}two> ; <{RDF}rest> _:first .\n",
+            encoding="utf-8",
+        )
+        vocabularies = Vocabularies([str(looped)], app.confdir)
+
+        members = vocabularies.listed_members(BASE + "ordered")
+
+        assert members == [BASE + "one", BASE + "two"]
+        assert BASE + "ordered" in app.warning.getvalue()
 
 
 class TestVocabulariesFingerprint:
