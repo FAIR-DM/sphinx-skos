@@ -19,19 +19,47 @@ Each takes the resource's URI as its one argument and has no content and no opti
 
 ## What is shown
 
-The directive becomes a section titled with the resource, holding a field list. A field appears
-only when the resource has a value for it, except the URI, which always appears. Hidden labels
-never appear.
+The directive becomes a section titled with the resource, holding a field list. It shows every
+statement the vocabulary files make about the resource except its hidden labels, which are meant
+for search and stay in the [RDF copies](rdf-copies.md) only. A field appears only when the
+resource has a value for it, except the URI, which always appears.
 
-| Directive | Fields, in order |
+The fields come in this order:
+
+1. The URI.
+2. The labels and what the resource is: preferred labels, alternative labels, definitions,
+   titles (`dcterms:title`), descriptions (`dcterms:description`), notations, and the scope
+   notes, notes, examples, history notes, editorial notes and change notes.
+3. The fields of the resource's kind, in the table below.
+4. Who made it, when and on what terms: creators, contributors and publishers, the created,
+   issued and modified dates, the version (`owl:versionInfo`), the licence (`dcterms:license`),
+   rights, identifiers, languages, sources, citations (`dcterms:bibliographicCitation`) and
+   `rdfs:seeAlso` links.
+5. Every other property, one field each, sorted by name. Each is named by its prefixed name, such
+   as `dcterms:isPartOf`, linked to the property's URI. A property no prefix in the files covers
+   is named by its URI.
+
+| Directive | Fields of its kind, in order |
 |---|---|
-| `skos:concept` | URI, preferred labels, alternative labels, definitions, notations, vocabulary, collections, broader, narrower, related, one field for each mapping link the concept has |
-| `skos:vocabulary` | URI, preferred labels, alternative labels, definitions, descriptions, concepts, collections |
-| `skos:collection` | URI, preferred labels, alternative labels, definitions, members |
+| `skos:concept` | vocabulary, collections, broader, narrower, related, one field for each mapping link the concept has |
+| `skos:vocabulary` | concepts, collections |
+| `skos:collection` | members |
 
-A link to a resource that has a page goes to that page. Any other link goes to the URI itself.
-A URI that runs code or carries data when followed, one that starts with `javascript:`,
-`data:` or `vbscript:`, is shown as text and never linked.
+How a value is shown depends on what it is:
+
+- **A URI** is a link. A link to a resource that has a page goes to that page and shows the
+  resource's title. Any other link goes to the URI itself, and shows the name the files give it,
+  for example a creator's `foaf:name`, or the URI when they give none. A URI that runs code or
+  carries data when followed, one that starts with `javascript:`, `data:` or `vbscript:`, is
+  shown as text and never linked.
+- **A literal** is shown as its text, followed by its language tag, or by its datatype when it has
+  no language, such as `(xsd:date)`.
+- **A blank node** is shown as a field list of its own statements, nested in the field, as deep
+  as the files go.
+
+Within a field, URIs come first, sorted by the text they show, then literals, sorted by language
+and then text, then blank nodes. An ordered collection's members keep the collection's order.
+Every page shows its fields and values in the same order on every build.
 
 ## What is not written
 

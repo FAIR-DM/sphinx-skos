@@ -3,11 +3,15 @@ from pathlib import Path
 
 import pytest
 from docutils import nodes
-from rdflib import Graph, Namespace
+import shutil
+from collections.abc import Callable
+
+from rdflib import RDF, BNode, Graph, Literal, Namespace, URIRef
 from sphinx.testing.util import SphinxTestApp
 
 BASE = "https://example.org/vocab/"
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
+EX = Namespace("https://example.org/terms/")
 
 
 def field_paragraphs(app: SphinxTestApp, docname: str) -> list[list[str]]:
@@ -92,12 +96,15 @@ class TestConceptFacts:
         assert [BASE + "facts/bare"] in field_paragraphs(app, "facts/bare")
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
-    def test_a_resource_without_facts_shows_only_its_uri(
+    def test_a_resource_without_facts_shows_only_its_uri_and_type(
         self, app: SphinxTestApp
     ) -> None:
         app.build()
 
-        assert field_paragraphs(app, "facts/bare") == [[BASE + "facts/bare"]]
+        assert field_links(app, BASE + "facts/bare") == [
+            [],
+            [str(RDF.type), str(SKOS.Concept)],
+        ]
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_the_title_is_the_first_label_by_language_tag_then_text(
@@ -143,20 +150,22 @@ class FieldLinks(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.fields: list[list[str]] = []
-        self.inside = False
+        self.depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = dict(attrs)
-        if tag == "dl" and "field-list" in (attributes.get("class") or "").split():
-            self.inside = True
-        elif self.inside and tag == "dt":
+        if tag == "dl" and (
+            self.depth or "field-list" in (attributes.get("class") or "").split()
+        ):
+            self.depth += 1
+        elif self.depth and tag == "dt":
             self.fields.append([])
-        elif self.inside and tag == "a" and attributes.get("href") is not None:
+        elif self.depth and tag == "a" and attributes.get("href") is not None:
             self.fields[-1].append(str(attributes["href"]))
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "dl":
-            self.inside = False
+        if tag == "dl" and self.depth:
+            self.depth -= 1
 
 
 def field_links(app: SphinxTestApp, uri: str) -> list[list[str]]:
@@ -322,7 +331,9 @@ class TestConceptLinks:
     ) -> None:
         app.build()
 
-        assert not any(field_links(app, BASE + "rel/loose"))
+        links = sum(field_links(app, BASE + "rel/loose"), [])
+        vocabularies = [BASE + "rel", BASE + "rel-other"]
+        assert not set(links) & set(hrefs(app, BASE + "rel/loose", vocabularies))
         assert app.warning.getvalue() == ""
 
 
@@ -403,7 +414,12 @@ class TestVocabularyPage:
     ) -> None:
         app.build()
 
-        assert not any(field_links(app, BASE + "rel-empty"))
+        assert not [
+            link
+            for links in field_links(app, BASE + "rel-empty")
+            for link in links
+            if not link.startswith("http")
+        ]
         assert field_paragraphs(app, "rel-empty")[0] == [BASE + "rel-empty"]
         assert app.warning.getvalue() == ""
 
@@ -444,7 +460,13 @@ class TestCollectionPage:
     def test_a_collection_with_no_member_builds_clean(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert not any(field_links(app, BASE + "rel/col-c"))
+        assert not [
+            link
+            for links in field_links(app, BASE + "rel/col-c")
+            for link in links
+            if link != href(app, BASE + "rel/col-c", BASE + "rel")
+            and not link.startswith("http")
+        ]
 
 
 def shown_fields(app: SphinxTestApp, docname: str, uri: str) -> list[tuple[str, ...]]:
@@ -566,3 +588,247 @@ class TestHandWrittenDirectivesThatCannotShow:
 
         lines = app.warning.getvalue().splitlines()
         assert len([line for line in lines if ".rst:" in line]) == 3
+
+
+PROPERTIES = ("prop", "prop/item", "prop/group")
+
+
+def properties_graph(rootdir: Path) -> Graph:
+    graph = Graph()
+    graph.parse(rootdir / "test-properties" / "vocabularies" / "properties.ttl")
+    return graph
+
+
+def field_of(app: SphinxTestApp, docname: str, value: str) -> nodes.field:
+    """Return the top-level field whose body holds a link to, or text of, ``value``."""
+    doctree = app.env.get_doctree(docname)
+    field_list = next(doctree.findall(nodes.field_list))
+    for field in field_list.children:
+        body = field[1]
+        targets = [
+            node.get("refuri") or node.get("reftarget")
+            for node in body.findall(nodes.Element)
+        ]
+        texts = [str(text) for text in body.findall(nodes.Text)]
+        if value in targets or value in texts:
+            return field
+    raise AssertionError(f"no field shows {value}")
+
+
+def name_links(field: nodes.field) -> list[str]:
+    """Return the addresses the field's name links to."""
+    return [
+        str(reference["refuri"]) for reference in field[0].findall(nodes.reference)
+    ]
+
+
+def literal_texts(graph: Graph, node: URIRef | BNode) -> list[str]:
+    """Return the text of every literal a node states, through its blank nodes."""
+    texts = []
+    for predicate, value in graph.predicate_objects(node):
+        if predicate == SKOS.hiddenLabel:
+            continue
+        if isinstance(value, Literal):
+            texts.append(str(value))
+        elif isinstance(value, BNode):
+            texts += literal_texts(graph, value)
+    return texts
+
+
+class TestEveryProperty:
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    def test_the_site_builds_without_a_warning(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    @pytest.mark.parametrize("name", PROPERTIES)
+    def test_every_literal_the_resource_states_appears_but_hidden_labels(
+        self, app: SphinxTestApp, rootdir: Path, name: str
+    ) -> None:
+        app.build()
+
+        expected = literal_texts(properties_graph(rootdir), URIRef(BASE + name))
+        doctree = app.env.get_doctree(name)
+        shown = {
+            str(text)
+            for field_list in doctree.findall(nodes.field_list)
+            for text in field_list.findall(nodes.Text)
+        }
+        assert expected
+        assert set(expected) <= shown
+        assert not {"secretword", "nestedsecret"} & shown
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    @pytest.mark.parametrize("name", PROPERTIES)
+    def test_every_uri_the_resource_states_is_linked(
+        self, app: SphinxTestApp, rootdir: Path, name: str
+    ) -> None:
+        app.build()
+
+        uri = BASE + name
+        graph = properties_graph(rootdir)
+        links = {link for links in field_links(app, uri) for link in links}
+        for value in graph.objects(URIRef(uri)):
+            if not isinstance(value, URIRef):
+                continue
+            if str(value).startswith(BASE):
+                assert href(app, uri, str(value)) in links, value
+            else:
+                assert str(value) in links, value
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    @pytest.mark.parametrize(
+        ("name", "predicate", "curie"),
+        [
+            ("prop", EX.custom, "ex:custom"),
+            ("prop", RDF.type, "rdf:type"),
+            ("prop/item", SKOS.broaderTransitive, "skos:broaderTransitive"),
+            (
+                "prop",
+                URIRef("https://unprefixed.example/predicate"),
+                "https://unprefixed.example/predicate",
+            ),
+        ],
+    )
+    def test_a_property_without_its_own_field_is_named_by_a_link_to_it(
+        self, app: SphinxTestApp, name: str, predicate: URIRef, curie: str
+    ) -> None:
+        app.build()
+
+        doctree = app.env.get_doctree(name)
+        names = [
+            field[0]
+            for field in next(doctree.findall(nodes.field_list)).children
+            if name_links(field) == [str(predicate)]
+        ]
+        assert [field_name.astext() for field_name in names] == [curie]
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    @pytest.mark.parametrize(
+        ("name", "value"),
+        [
+            ("prop", "https://example.org/agents/maker"),
+            ("prop", "https://example.org/agents/unnamed"),
+            ("prop", "https://creativecommons.org/licenses/by/4.0/"),
+            ("prop", "All rights reversed."),
+            ("prop", "2024-05-01"),
+            ("prop", "1.2.0"),
+            ("prop", "https://example.org/sources/book"),
+            ("prop", "https://example.org/elsewhere"),
+            ("prop", "Properties vocabulary"),
+            ("prop", "PROP-1"),
+            ("prop/item", "Use for items."),
+            ("prop/item", "A note."),
+            ("prop/item", "An example."),
+            ("prop/item", "Added in 2024."),
+            ("prop/item", "Check wording."),
+            ("prop/item", "Renamed."),
+            ("prop/group", "G1"),
+            ("prop/group", "https://example.org/agents/maker"),
+        ],
+    )
+    def test_common_metadata_has_a_field_of_its_own(
+        self, app: SphinxTestApp, name: str, value: str
+    ) -> None:
+        app.build()
+
+        assert name_links(field_of(app, name, value)) == []
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    def test_each_metadata_property_has_a_separate_field(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        values = ["2024-01-02", "2024-02-03", "2024-05-01", "1.2.0", "PROP-1"]
+        fields = [id(field_of(app, "prop", value)) for value in values]
+        assert len(set(fields)) == len(values)
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    def test_an_agent_the_files_name_is_shown_by_its_name_and_linked(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        field = field_of(app, "prop", "https://example.org/agents/maker")
+        references = [
+            (reference.astext(), reference["refuri"])
+            for reference in field[1].findall(nodes.reference)
+        ]
+        assert references == [("Maker Org", "https://example.org/agents/maker")]
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    def test_an_agent_the_files_do_not_name_is_shown_by_its_uri(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        unnamed = "https://example.org/agents/unnamed"
+        field = field_of(app, "prop", unnamed)
+        assert [r.astext() for r in field[1].findall(nodes.reference)] == [unnamed]
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    @pytest.mark.parametrize(
+        ("text", "tag"),
+        [
+            ("2024-05-01", "xsd:date"),
+            ("42", "xsd:integer"),
+            ("custom text", "de"),
+        ],
+    )
+    def test_a_literal_shows_its_datatype_or_language(
+        self, app: SphinxTestApp, text: str, tag: str
+    ) -> None:
+        app.build()
+
+        assert any(has_tag(p, text, tag) for p in field_paragraphs(app, "prop"))
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    def test_a_blank_node_shows_its_own_statements_nested_in_the_field(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        field = field_of(app, "prop", "Ada Example")
+        nested = list(field[1].findall(nodes.field_list))
+        assert len(nested) == 3
+        assert [n.astext().count("Example") for n in nested] == [1, 1, 1]
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    def test_blank_nodes_nest_as_deep_as_the_files_state_them(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        field = field_of(app, "prop/item", "deep value")
+        part = [
+            node
+            for node in field[1].findall(nodes.field_list)
+            if "deep value" in node.astext()
+        ]
+        assert len(part) == 2
+        assert name_links(next(part[1].findall(nodes.field))) == [str(EX.deepest)]
+
+    def test_the_fields_are_in_the_same_order_on_every_build(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        shown = []
+        for build in ("first", "second"):
+            srcdir = tmp_path / build
+            shutil.copytree(rootdir / "test-properties", srcdir)
+            app = make_app("dirhtml", srcdir=srcdir)
+            app.build()
+            shown.append(
+                [
+                    field.astext()
+                    for name in PROPERTIES
+                    for field in app.env.get_doctree(name).findall(nodes.field)
+                ]
+            )
+
+        assert shown[0] == shown[1]

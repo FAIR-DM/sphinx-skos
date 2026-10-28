@@ -6,6 +6,22 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A page shows every statement its resource carries, except hidden labels. Titles,
+  descriptions, notations, the SKOS notes, creators, contributors, publishers, dates, the
+  version, licence, rights, identifiers, languages, sources, citations and `rdfs:seeAlso` each
+  get a field of their own, on every kind of page. Every other property gets a field named by
+  its prefixed name, linked to the property. A literal shows its language or datatype, and a
+  blank node shows its own statements nested.
+- A link to a URI with no page on the site shows the name the vocabulary files give it, such as
+  a creator's `foaf:name`, instead of the URI.
+- The vocabulary files' namespace prefixes are bound in `Vocabularies.graph`.
+
+### Removed
+
+- `Vocabularies.descriptions()` and `Vocabularies.notations()`. Use `Vocabularies.statements()`.
+
 ## [v0.2.0] - 2026-10-28
 
 ### Added

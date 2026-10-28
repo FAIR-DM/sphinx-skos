@@ -92,7 +92,10 @@ Someone follows a concept's URI, or browses the site, and lands on the concept's
 them what they need to use the concept: its labels in every language, its definition, its
 notation, its place in the vocabulary, the collections it is in and its mapping links to other
 vocabularies. From a vocabulary's page they can reach every concept and collection in it, and
-from a collection's page every member, in order when the collection is ordered.
+from a collection's page every member, in order when the collection is ordered. Every page also
+shows everything else its resource's files say about it: who created and published it, its
+licence, version and dates, its notes and sources, and any other property, so nothing the files
+state is hidden from a reader except hidden labels.
 
 **Why this priority**: A page with nothing a reader can use is no better than the Turtle file.
 This is what the site is published for.
@@ -136,6 +139,23 @@ links in the built HTML.
 14. **Given** a label or definition that holds characters with a meaning in HTML, **When** a reader
     opens the page, **Then** the characters are shown as text and nothing in them is interpreted
     as markup.
+15. **Given** a vocabulary with a creator, publisher, licence, version and modified date, **When**
+    a reader opens its page, **Then** each of them is shown in a field of its own.
+16. **Given** a concept with a scope note, a note, an example, a history note, an editorial note
+    or a change note, **When** a reader opens its page, **Then** each is shown in a field of its
+    own.
+17. **Given** a creator whose URI the files name, for example with `foaf:name`, **When** a reader
+    opens the page, **Then** the creator is shown by that name and linked to its URI. A creator
+    the files do not name is shown by its URI.
+18. **Given** a resource stating a property the page has no field of its own for, **When** a
+    reader opens its page, **Then** the property is shown in a field named by its prefixed name
+    and linked to the property's URI, with each URI value linked and each literal shown with its
+    language or datatype.
+19. **Given** a property whose value is a blank node, such as a creator written as a blank node
+    with a `foaf:name`, **When** a reader opens the page, **Then** the blank node's own statements
+    are shown nested under the property.
+20. **Given** any resource, **When** a reader opens its page, **Then** every statement the files
+    make about the resource is shown, except its hidden labels, in the same order on every build.
 
 ---
 
@@ -210,6 +230,10 @@ check that the concept's content appears in that page.
   extension is not a validator and emits no warning.
 - A vocabulary with no concepts or collections gets a page that shows its own content.
 - A label with no language tag is shown as a label with no language.
+- A blank node that the files make reach itself again is shown once, and the build ends.
+- A property's prefixed name comes from the first vocabulary file to bind its prefix. Where two
+  files bind one prefix to different namespaces, the second namespace gets the prefix with a
+  number added, such as `ex1`.
 
 ## Requirements *(mandatory)*
 
@@ -256,6 +280,23 @@ check that the concept's content appears in that page.
   and links to every concept and every collection in it. *(US2)*
 - **FR-013**: A collection's page MUST show its URI, labels and definition, and link to every
   member. An ordered collection's members MUST be in the collection's order. *(US2)*
+- **FR-025**: Every page MUST show every statement the vocabulary files make about its resource,
+  other than its hidden labels. *(US2)*
+- **FR-026**: Every page MUST show each of these in a field of its own when the resource states
+  it: `dcterms:title`, `dcterms:description`, `skos:notation`, `skos:scopeNote`, `skos:note`,
+  `skos:example`, `skos:historyNote`, `skos:editorialNote`, `skos:changeNote`,
+  `dcterms:creator`, `dcterms:contributor`, `dcterms:publisher`, `dcterms:created`,
+  `dcterms:issued`, `dcterms:modified`, `owl:versionInfo`, `dcterms:license`, `dcterms:rights`,
+  `dcterms:identifier`, `dcterms:language`, `dcterms:source`, `dcterms:bibliographicCitation` and
+  `rdfs:seeAlso`. *(US2)*
+- **FR-027**: Every other property a resource states MUST be shown in a field named by its
+  prefixed name, from the prefixes of the vocabulary files, or by its URI where no prefix covers
+  it, and linked to the property's URI. *(US2)*
+- **FR-028**: A URI value MUST be shown as a link, by its page's title when it has a page,
+  else by the name the files give it with `skos:prefLabel`, `foaf:name`, `schema:name`,
+  `rdfs:label` or `dcterms:title`, else by the URI. A literal MUST be shown with its language
+  tag, or its datatype when it has no language. A blank node MUST be shown as its own
+  statements, nested under the property, as deep as the files go. *(US2)*
 - **FR-014**: A link to a resource that has a page on the site MUST go to that page. A link to
   any other URI MUST go to the URI itself, without a warning. *(US2)*
 - **FR-015**: A page's title MUST be the resource's preferred label in the site's `language`, or,
@@ -329,14 +370,16 @@ check that the concept's content appears in that page.
 - Q: Does a concept page show its place in the hierarchy? → A: Yes. It links to its broader,
   narrower and related concepts, whichever concept states the link, as a reader cannot use a
   concept's page without them. The RDF copy still holds only the concept's own triples.
+- Q: Which properties does a page show? → A: Every statement the files make about the resource
+  except hidden labels. Common metadata (Dublin Core, `owl:versionInfo`, the SKOS notes,
+  `rdfs:seeAlso`) gets a field of its own, and every other property a field named by its
+  prefixed name, so no statement is hidden from a reader.
 - Q: Does a directive written by hand produce RDF copies? → A: No. A resource has one page with
   its copies, its generated page, so its URI resolves to one place.
 
 ## Assumptions
 
 - The vocabulary files are Turtle, as `CONTEXT.md` defines a vocabulary file.
-- Other SKOS properties (notes other than definitions, Dublin Core metadata, sources) are in the
-  RDF copies but not shown on pages. Showing more of them later is a change to this feature.
 - Linking to a resource from a prose page with a cross-reference role, an index of all
   vocabularies, and search are out of scope.
 - Releasing the package is out of scope.
