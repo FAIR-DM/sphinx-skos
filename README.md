@@ -64,7 +64,7 @@ own:
 ```yaml
 jobs:
   site:
-    uses: FAIR-DM/sphinx-skos/.github/workflows/build-site.yml@v0.4.0
+    uses: FAIR-DM/sphinx-skos/.github/workflows/build-site.yml@v0.3.2
     permissions:
       contents: read
       pages: write
