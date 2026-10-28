@@ -126,3 +126,17 @@ class TestConceptFacts:
         assert "&lt;b&gt;&amp;amp;&lt;/b&gt;" in html
         assert "b" not in parser.names
 
+
+class TestFieldTranslation:
+    @pytest.mark.sphinx("dirhtml", testroot="translation")
+    def test_a_field_name_is_translated_and_a_label_equal_to_it_is_not(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        doctree = app.env.get_doctree("words/shared")
+        names = [name.astext() for name in doctree.findall(nodes.field_name)]
+        bodies = [str(text) for text in doctree.findall(nodes.Text)]
+        assert "Bevorzugte Bezeichnungen" in names
+        assert "Preferred labels" not in names
+        assert "Preferred labels" in bodies
