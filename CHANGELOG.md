@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A rebuild after the extension is upgraded rereads every page, so it gives what a clean build
+  gives. Before, an incremental build kept the pages the previous version had rendered.
+
 ## [v0.3.0] - 2026-10-28
 
 ### Changed
