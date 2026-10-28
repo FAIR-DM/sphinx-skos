@@ -296,3 +296,27 @@ class TestRelativeIris:
         assert "<https://example.org/vocab/other-thing>" in copy.read_text(
             encoding="utf-8"
         )
+
+
+class TestParallelBuild:
+    def test_a_parallel_build_gives_the_pages_and_copies_of_a_serial_one(
+        self, make_app: MakeApp, rootdir: Path, tmp_path: Path
+    ) -> None:
+        sites = {}
+        for name, parallel in (("serial", 1), ("parallel", 2)):
+            site = tmp_path / name
+            shutil.copytree(rootdir / "test-vocabularies", site)
+            shutil.rmtree(site / "problems")
+            sites[name] = make_app("dirhtml", srcdir=site, parallel=parallel)
+            sites[name].build()
+
+        parallel_app = sites["parallel"]
+        assert parallel_app.parallel == 2
+        assert parallel_app.env.found_docs == sites["serial"].env.found_docs
+        for address in ADDRESSES:
+            for suffix in FORMATS:
+                assert copy_file(parallel_app, address, suffix).is_file()
+        assert copy_names(Path(parallel_app.outdir)) == copy_names(
+            Path(sites["serial"].outdir)
+        )
+        assert "example.org" not in parallel_app.warning.getvalue()
