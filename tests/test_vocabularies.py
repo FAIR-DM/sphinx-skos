@@ -4,7 +4,7 @@ import pytest
 from rdflib import Namespace, URIRef
 from sphinx.testing.util import SphinxTestApp
 
-from sphinx_skos.vocabularies import Vocabularies
+from sphinx_skos.vocabularies import Label, Vocabularies
 
 BASE = "https://example.org/vocab/"
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
@@ -199,3 +199,52 @@ class TestVocabulariesTitle:
         vocabularies = Vocabularies([str(concept)], app.confdir)
 
         assert vocabularies.title(BASE + "c", "en") == BASE + "c"
+
+
+class TestVocabulariesFacts:
+    @pytest.mark.sphinx("dirhtml", testroot="facts")
+    def test_labels_come_with_their_language_ordered_by_language_then_text(
+        self, app: SphinxTestApp
+    ) -> None:
+        vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+
+        assert vocabularies.labels(BASE + "facts/rich", "prefLabel") == [
+            Label("Reich", "de"),
+            Label("Rich", "en"),
+        ]
+        assert vocabularies.labels(BASE + "facts/rich", "altLabel") == [
+            Label("Plain", ""),
+            Label("Vermögend", "de"),
+            Label("Wealthy", "en"),
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="facts")
+    def test_a_hidden_label_is_not_read_as_either_kind_of_label(
+        self, app: SphinxTestApp
+    ) -> None:
+        vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+
+        shown = vocabularies.labels(BASE + "facts/rich", "prefLabel")
+        shown += vocabularies.labels(BASE + "facts/rich", "altLabel")
+
+        assert "secretword" not in [label.text for label in shown]
+
+    @pytest.mark.sphinx("dirhtml", testroot="facts")
+    def test_definitions_come_with_their_language_and_notations_are_sorted(
+        self, app: SphinxTestApp
+    ) -> None:
+        vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+
+        assert vocabularies.definitions(BASE + "facts/rich") == [
+            Label("Mit viel Geld.", "de"),
+            Label("Having much money.", "en"),
+        ]
+        assert vocabularies.notations(BASE + "facts/rich") == ["R1"]
+
+    @pytest.mark.sphinx("dirhtml", testroot="facts")
+    def test_a_resource_without_facts_has_empty_lists(self, app: SphinxTestApp) -> None:
+        vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+
+        assert vocabularies.labels(BASE + "facts/bare", "prefLabel") == []
+        assert vocabularies.definitions(BASE + "facts/bare") == []
+        assert vocabularies.notations(BASE + "facts/bare") == []

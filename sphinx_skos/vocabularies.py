@@ -5,7 +5,7 @@ import hashlib
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from rdflib import RDF, Graph, Namespace
 from rdflib.term import Literal as RDFLiteral
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
 
 type Kind = Literal["vocabulary", "concept", "collection"]
+type LabelProperty = Literal["prefLabel", "altLabel"]
 
 # The first kind a URI is typed with wins, in this order.
 KIND_TYPES: tuple[tuple[Kind, tuple[URIRef, ...]], ...] = (
@@ -24,6 +25,18 @@ KIND_TYPES: tuple[tuple[Kind, tuple[URIRef, ...]], ...] = (
     ("collection", (SKOS.Collection, SKOS.OrderedCollection)),
     ("concept", (SKOS.Concept,)),
 )
+
+
+class Label(NamedTuple):
+    """A piece of text and the language it is written in.
+
+    Attributes:
+        text: The text.
+        language: The language tag, or an empty string when there is none.
+    """
+
+    text: str
+    language: str
 
 
 class Vocabularies:
@@ -130,12 +143,63 @@ class Vocabularies:
         Returns:
             The text to title the resource's page and links to it with.
         """
-        labels = sorted(
-            (label.language or "", str(label))
-            for label in self.graph.objects(URIRef(uri), SKOS.prefLabel)
-            if isinstance(label, RDFLiteral)
+        labels = self.labels(uri, "prefLabel")
+        for label in labels:
+            if label.language.lower() == language.lower():
+                return label.text
+        return labels[0].text if labels else uri
+
+    def labels(self, uri: str, property_: LabelProperty) -> list[Label]:
+        """Return the preferred or alternative labels of a resource.
+
+        Hidden labels are never returned.
+
+        Args:
+            uri: The resource's URI.
+            property_: Which labels to read, ``"prefLabel"`` or ``"altLabel"``.
+
+        Returns:
+            The labels, sorted by language tag and then text.
+        """
+        return self.read_literals(uri, SKOS[property_])
+
+    def definitions(self, uri: str) -> list[Label]:
+        """Return the definitions of a resource.
+
+        Args:
+            uri: The resource's URI.
+
+        Returns:
+            The definitions, sorted by language tag and then text.
+        """
+        return self.read_literals(uri, SKOS.definition)
+
+    def notations(self, uri: str) -> list[str]:
+        """Return the notations of a resource.
+
+        Args:
+            uri: The resource's URI.
+
+        Returns:
+            The notations, sorted.
+        """
+        return sorted(label.text for label in self.read_literals(uri, SKOS.notation))
+
+    def read_literals(self, uri: str, predicate: URIRef) -> list[Label]:
+        """Return the literal objects of one property of a resource.
+
+        Args:
+            uri: The resource's URI.
+            predicate: The property to read.
+
+        Returns:
+            The literals, sorted by language tag and then text.
+        """
+        return sorted(
+            (
+                Label(str(value), value.language or "")
+                for value in self.graph.objects(URIRef(uri), predicate)
+                if isinstance(value, RDFLiteral)
+            ),
+            key=lambda label: (label.language, label.text),
         )
-        for tag, text in labels:
-            if tag.lower() == language.lower():
-                return text
-        return labels[0][1] if labels else uri

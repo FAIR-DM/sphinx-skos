@@ -34,11 +34,20 @@ warnings take part in Sphinx's warning handling, including `-W`.
 `Vocabularies(patterns, confdir)`
 : The site's vocabulary files read into one `rdflib.Graph`. Its attributes are `patterns`, `graph`,
   `fingerprint` (a SHA-256 digest of the files read) and `resources` (the kind of each vocabulary,
-  concept and collection, by URI). Its methods read SKOS facts from the graph, such as
-  `title(uri, language)`.
+  concept and collection, by URI). Its methods read SKOS facts from the graph: `title(uri, language)`,
+  `labels(uri, property_)` for the preferred or alternative labels, `definitions(uri)` and
+  `notations(uri)`. Labels and definitions come as `Label`s sorted by language tag, then text.
+  `read_literals(uri, predicate)` reads any property's literals the same way.
 
 `Kind`
 : The kind of a resource: `"vocabulary"`, `"concept"` or `"collection"`.
+
+`Label`
+: A piece of text and its language: `text`, and `language`, which is an empty string when the text
+  has no language tag.
+
+`LabelProperty`
+: Which labels to read: `"prefLabel"` or `"altLabel"`.
 
 ## Module `sphinx_skos.pages`
 
@@ -58,7 +67,13 @@ warnings take part in Sphinx's warning handling, including `-W`.
 ## Module `sphinx_skos.directives`
 
 `ResourceDirective`
-: The base of the three directives. It takes a resource URI as its one argument.
+: The base of the three directives. It takes a resource URI as its one argument. `fields(uri)`
+  returns the field list shown under the page title, which a subclass extends. `field(name,
+  *values)` builds one field and `label_values(labels)` the paragraphs for labels with their
+  languages. `vocabularies` is the `Vocabularies` of the build in progress.
 
 `VocabularyDirective`, `ConceptDirective`, `CollectionDirective`
-: The `skos:vocabulary`, `skos:concept` and `skos:collection` directives.
+: The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. A concept's page shows
+  its URI, preferred and alternative labels, definitions and notations. A field appears only when
+  the concept has a value for it, and hidden labels are never shown. The names of the fields are
+  translated through the `sphinx_skos` message catalogue.
