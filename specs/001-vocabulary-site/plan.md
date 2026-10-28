@@ -112,18 +112,26 @@ Built once per build from the settings and the configuration directory.
 Built at `builder-inited` from `Vocabularies`, the base URI, the source directory and the source
 suffixes.
 
-- **Page address** (research R10): the URI with the base removed, refused when empty, holding `#`
-  or `?`, starting with `/`, or having an empty, `.` or `..` segment. Document name: the address,
-  or `<address>index` when the address ends in `/`.
+- **Page address** (research R10): the URI with the base removed, refused when empty, holding `#`,
+  `?` or `\`, starting with `/`, or having an empty, `.` or `..` segment. Document name: the
+  address, or `<address>index` when the address ends in `/`.
+- **Kind**: a URI typed with more than one SKOS kind is a vocabulary before a collection before a
+  concept.
 - **Warnings**, each naming its subject and each leaving that resource without a page: outside the
-  base URI, no page address, address already used by the site (naming the address and the
-  resource). With `skos_vocabularies` set and `skos_base_uri` empty, one warning and no pages at
+  base URI, no page address, address already used (naming the address and the resource). An
+  address is compared with its `/index` ending removed, because `dirhtml` writes `x` and `x/index`
+  to the same file. It is already used when a site document has it, or when a resource earlier in
+  URI order has claimed it. With `skos_vocabularies` set and `skos_base_uri` empty, one warning and no pages at
   all.
-- **Sources**: `<srcdir>/<docname>.rst` holding a marker comment line, `:orphan:` and one
-  directive with the URI. Written only when the text differs from what is on disk.
+- **Sources**: `<srcdir>/<docname><suffix>` holding a marker comment line, `:orphan:` and one
+  directive with the URI, where `<suffix>` is the first suffix in `source_suffix` whose parser is
+  `restructuredtext`. A site with none gets one warning and no pages. Written only when the text
+  differs from what is on disk.
 - **Clean-up**: every `.rst` file under the source directory whose first line is the marker and
-  whose document name is no longer generated is deleted, with the builder's output file for it
-  (`builder.get_outfilename(docname)`) and its RDF copies, when they exist. Files without the
+  whose document name is no longer generated is deleted. When the builder is a
+  `StandaloneHTMLBuilder`, so are its output file (`builder.get_outfilename(docname)`), its copied
+  source under `_sources/` and its RDF copies, when they exist. The copy removal arrives with
+  `RdfCopies` in T011. Files without the
   marker are never touched. Directories the build writes into (`outdir`, `doctreedir`) are skipped
   when they sit inside the source directory.
 - **`docname_for(uri)`**: the generated document for a URI, or `None`. This is what links and RDF
@@ -156,11 +164,16 @@ suffixes.
    than the directive's: warning naming the URI, at `self.get_location()`, and no nodes (FR-023).
    A missing argument is refused by docutils' own argument check, which reports at the page.
 2. Returns one `nodes.section` whose `nodes.title` is the resource's title, with a
-   `nodes.field_list` below it. Fields appear only when they have values, except the URI, which
+   `nodes.field_list` below it. The section's `names` are set from the title and its ids assigned
+   with `self.state.document.note_implicit_target(section)`, so a directive under a titled section
+   of a prose page, or used twice in one page, gets unique ids. Fields appear only when they have values, except the URI, which
    always appears.
 3. A link to a URI with a generated page is a `pending_xref` (`refdomain="std"`, `reftype="doc"`,
    `reftarget="/" + docname`, `refexplicit=True`) around the target's title. Any other link is a
-   `nodes.reference` with `refuri` set to the URI and the URI as its text (research R6).
+   `nodes.reference` with `refuri` set to the URI and the URI as its text (research R6). A URI
+   whose scheme, case-insensitive and after leading whitespace, is `javascript`, `data` or
+   `vbscript` is shown as text and never linked (decision D27). A literal where a URI was expected
+   (an `skos:exactMatch` to a string) is shown as text.
 4. Field names are fixed text through `_ = get_translation("sphinx_skos")`. A label shown with its
    language puts the tag in its own text node beside the label. A label with no tag shows no tag.
    Vocabulary text only ever goes into `nodes.Text`.
@@ -180,16 +193,18 @@ Hidden labels never appear (FR-011). A vocabulary's "definition or description" 
 For one generated page: the four formats as (suffix, rdflib format, media type):
 `.ttl`/`turtle`/`text/turtle`, `.jsonld`/`json-ld`/`application/ld+json`,
 `.rdf`/`xml`/`application/rdf+xml`, `.nt`/`nt`/`application/n-triples`. Each copy is written to
-the page's output file with its suffix replaced (research R4). The alternate links use the copy's
+the page's output file with its suffix replaced (research R4). The copy's graph takes the merged
+graph's namespace bindings, so the Turtle and RDF/XML copies use the files' own prefixes. The alternate links use the copy's
 bare file name as `href`.
 
 ### Test sites
 
 Under `tests/roots/`, URIs under `https://example.org/vocab/`:
 
-- `test-vocabularies`: two files matched by one pattern, holding two vocabularies, concepts with
+- `test-vocabularies`: two files matched by one pattern, one of them holding two vocabularies, concepts with
   labels in two languages, hidden labels, a notation, an ordered and an unordered collection,
-  broader, narrower and related links stated from either side, a mapping link to a concept with a
+  broader, narrower and related links stated from either side, members, relations and labels
+  written in an order that differs from title-then-URI order, a mapping link to a concept with a
   page and one to an outside URI, a resource outside the base URI, an organisation, a concept in
   no vocabulary, a vocabulary with no concepts, a label with no language, and a label holding
   `<b>&amp;</b>`. One resource is described in both files. Tests for a clean build use a root

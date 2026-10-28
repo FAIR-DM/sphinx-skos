@@ -53,10 +53,13 @@ title rule from research R9, no fields yet. Tests, building `test-vocabularies` 
 - one output page per vocabulary, concept and collection, at its address, and none for anything
   else (scenarios 1, 2, 4, FR-002, FR-004);
 - a resource outside the base URI has no page and a warning names its URI (scenario 7);
-- a URI equal to the base URI, one with `#`, one with `?` and one with a `..` segment have no page
-  and each is named in a warning (scenario 8, research R10);
+- a URI equal to the base URI, one with `#`, one with `?`, one with a `\` and one with a `..`
+  segment have no page and each is named in a warning (scenario 8, research R10);
 - a site's own document at an address keeps its content, and the warning names the address and
-  the resource (scenario 9);
+  the resource (scenario 9), including a site document `a` against a resource whose address is
+  `a/`, and two resources `x` and `x/` (the second named in the warning);
+- a site whose `source_suffix` is `{".txt": "restructuredtext"}` has every page, so a hard-coded
+  `.rst` fails, and a site with no reStructuredText suffix gets one warning and no pages;
 - with no base URI, no page is generated and one warning is emitted (scenario 11);
 - a generated page raises no table-of-contents warning, and a site whose `index` lists a
   vocabulary's address in a `toctree` builds clean with that page in its table of contents
@@ -87,7 +90,8 @@ compares the set of output files and each page's doctree with a clean build of t
 (scenario 12, FR-007):
 
 - a label edited: the page shows the new label;
-- a resource removed: its page and its source are gone, and its RDF copies once US3 lands;
+- a resource removed: its page, its source and its `_sources/` copy are gone (its RDF copies are
+  added to this test in T011);
 - a file added: its resources have pages;
 - an unchanged rebuild rewrites no generated source (modification times kept).
 
@@ -95,8 +99,7 @@ compares the set of output files and each page's doctree with a clean build of t
 
 **Files**: `tests/test_pages.py`
 
-- built under alabaster and under furo, both clean, with the same page set and the same doctrees
-  (scenario 14, FR-024);
+- built under alabaster and under furo, both clean, with the same page set (scenario 14, FR-024);
 - built with `html`, every resource has a page at the file the builder gives its document name
   (scenario 15).
 
@@ -121,9 +124,10 @@ layout.
   shows none (US2 scenario 1, edge case);
 - no hidden label appears in the HTML (scenario 2, FR-011);
 - both definitions with their languages, and the notation (scenario 3);
-- the title is the label in the site's `language`; with `language` set to one the concept has no
-  label in, the title is the same on two builds; a concept with no preferred label is titled with
-  its URI (scenario 4, FR-015);
+- the title is the label in the site's `language`; a concept whose preferred labels are in two
+  other languages, written in reverse tag order, is titled with the label the test computes as the
+  first by tag then text; a concept with no preferred label is titled with its URI (scenario 4,
+  FR-015);
 - the URI appears on the page (scenario 9);
 - a label holding `<b>&amp;</b>` appears in the HTML escaped, and no `<b>` element comes from it
   (scenario 14, FR-016).
@@ -153,7 +157,8 @@ rule (plan, Directives step 3). Tests on the built HTML, finding each link by it
   URI, each in the field of its own mapping property, with no warning (scenarios 7, 8, FR-014);
 - the concept's vocabulary page is linked (scenario 13), and a concept in no vocabulary builds
   with no warning (edge case);
-- a link to a resource outside the base URI goes to its URI (edge case).
+- a link to a resource outside the base URI goes to its URI (edge case);
+- a mapping link to a `javascript:` URI is shown as text with no link (decision D27).
 
 #### T010 — Vocabulary and collection pages
 
@@ -165,8 +170,10 @@ rule (plan, Directives step 3). Tests on the built HTML, finding each link by it
   every collection in it (scenario 10, FR-012), and a vocabulary with none builds with its own
   content (edge case);
 - an ordered collection links its members in list order (scenario 11);
-- an unordered collection links every member, in the same order on two builds (scenario 12);
-- every list on a page the vocabulary does not order comes out the same on two builds (FR-015).
+- an unordered collection, whose members the file lists out of title order, links every member in
+  the order the test computes by title then URI (scenario 12);
+- a vocabulary's concepts and a concept's relations, written out of order in the file, come out
+  in the order the test computes (FR-015).
 
 ---
 
@@ -189,7 +196,8 @@ rule (plan, Directives step 3). Tests on the built HTML, finding each link by it
 - an ordered collection's copy holds its member list complete and in order (scenario 3);
 - a concept's copy holds neither the broader concept's `skos:narrower` nor a collection's
   `skos:member` naming it (scenario 4);
-- the rebuild test of T005 for a removed resource also finds its copies gone.
+- the rebuild test of T005 for a removed resource also finds its copies gone, and `GeneratedPages`
+  removes them.
 
 #### T012 — Software finds the copies from the page
 
@@ -231,7 +239,9 @@ The test site has a prose page with each of the three directives by hand. Tests:
   prose page has neither (scenario 2, FR-022);
 - a URI naming no resource warns naming the URI and the page (scenario 3);
 - a directive with no URI, and a vocabulary's URI in `skos:concept`, each warn naming the page
-  and, where there is one, the URI (scenario 4, FR-023).
+  and, where there is one, the URI (scenario 4, FR-023);
+- a directive under a titled section of a prose page, and the same directive twice in one page,
+  build clean (design review SPEC-002).
 
 ---
 

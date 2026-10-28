@@ -117,3 +117,18 @@ and purged, to save rereading the site's few prose pages (research R2).
 
 A test listing the package's files records today's layout and fails for any new module. FR-024's
 build-under-any-theme half is tested (T006).
+
+## D27 — Links to script URIs are shown as text
+
+A vocabulary file can come from another organisation. A link whose scheme is `javascript`, `data`
+or `vbscript` is shown as text, never as a link, because the HTML writer puts `refuri` into `href`
+unchanged. This narrows FR-014 only for schemes a browser runs.
+
+## D28 — Design review
+
+Applied to the plan and tasks: reStructuredText suffix taken from `source_suffix` (SPEC-001),
+section ids from `note_implicit_target` (SPEC-002), clean-up of `_sources/` and only on HTML
+builders (SPEC-003), order tests against an order the test computes (SPEC-004), addresses compared
+with `/index` removed and between generated pages (ARCH-001), script URIs not linked (SEC-001, D27),
+`\` refused in an address (SEC-002). Carried as a watch item for the code review: nothing adds a
+stylesheet, script or static file (SPEC-005, D26).
