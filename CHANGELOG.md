@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [v0.3.2] - 2026-10-28
+
 ### Added
 
 - A reusable GitHub Actions workflow, `.github/workflows/build-site.yml`, that builds a site with
