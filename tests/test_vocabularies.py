@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import Literal
 
 import pytest
-from rdflib import Namespace, URIRef
+from rdflib import DCTERMS, SKOS, Namespace, URIRef
+from rdflib.term import Literal as RDFLiteral
 from sphinx.testing.util import SphinxTestApp
 
 from sphinx_skos.vocabularies import Label, Target, Vocabularies
@@ -264,7 +265,7 @@ class TestVocabulariesFacts:
         assert "secretword" not in [label.text for label in shown]
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
-    def test_definitions_come_with_their_language_and_notations_are_sorted(
+    def test_definitions_come_with_their_language(
         self, app: SphinxTestApp
     ) -> None:
         vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
@@ -273,7 +274,14 @@ class TestVocabulariesFacts:
             Label("Mit viel Geld.", "de"),
             Label("Having much money.", "en"),
         ]
-        assert vocabularies.notations(BASE + "facts/rich") == ["R1"]
+
+    @pytest.mark.sphinx("dirhtml", testroot="facts")
+    def test_statements_leave_out_hidden_labels(self, app: SphinxTestApp) -> None:
+        vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+
+        statements = vocabularies.statements(URIRef(BASE + "facts/rich"))
+        assert SKOS.hiddenLabel not in statements
+        assert SKOS.prefLabel in statements
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_a_resource_without_facts_has_empty_lists(self, app: SphinxTestApp) -> None:
@@ -281,7 +289,6 @@ class TestVocabulariesFacts:
 
         assert vocabularies.labels(BASE + "facts/bare", "prefLabel") == []
         assert vocabularies.definitions(BASE + "facts/bare") == []
-        assert vocabularies.notations(BASE + "facts/bare") == []
 
 
 class TestVocabulariesRelations:
@@ -381,12 +388,17 @@ class TestVocabulariesRelations:
 
         assert found == [BASE + name for name in ("rel/pb2", "rel/n2", "rel/hub")]
 
-    def test_descriptions_are_the_dcterms_literals_of_a_resource(
+    def test_statements_are_every_property_of_a_resource(
         self, vocabularies: Vocabularies
     ) -> None:
-        assert vocabularies.descriptions(BASE + "rel") == [
-            Label("Describes the relations.", "en")
+        statements = vocabularies.statements(URIRef(BASE + "rel"))
+
+        assert statements[DCTERMS.description] == [
+            RDFLiteral("Describes the relations.", lang="en")
         ]
+        assert set(statements) == set(
+            vocabularies.graph.predicates(URIRef(BASE + "rel"))
+        )
 
 
 class TestVocabulariesOwnRdf:
@@ -412,3 +424,31 @@ class TestVocabulariesOwnRdf:
             dict(own.namespaces())["skos"]
             == dict(vocabularies.graph.namespaces())["skos"]
         )
+
+
+class TestVocabulariesNames:
+    @pytest.fixture
+    def vocabularies(self, rootdir: Path) -> Vocabularies:
+        return Vocabularies(["vocabularies/*.ttl"], rootdir / "test-properties")
+
+    def test_an_agent_is_named_by_its_foaf_name(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        maker = "https://example.org/agents/maker"
+        assert vocabularies.name(maker, "en") == "Maker Org"
+
+    def test_a_uri_the_files_do_not_name_is_named_by_itself(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        unnamed = "https://example.org/agents/unnamed"
+        assert vocabularies.name(unnamed, "en") == unnamed
+
+    def test_a_resource_is_named_by_its_title(self, vocabularies: Vocabularies) -> None:
+        assert vocabularies.name(BASE + "prop", "en") == "Properties"
+
+    def test_a_uri_is_shortened_by_a_prefix_of_the_files(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        assert vocabularies.curie("https://example.org/terms/custom") == "ex:custom"
+        unprefixed = "https://unprefixed.example/predicate"
+        assert vocabularies.curie(unprefixed) == unprefixed

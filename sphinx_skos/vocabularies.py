@@ -7,9 +7,9 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Literal, NamedTuple
 
-from rdflib import DCTERMS, RDF, Graph, Namespace
+from rdflib import DCTERMS, FOAF, RDF, RDFS, Graph, Namespace
+from rdflib.term import BNode, Node, URIRef
 from rdflib.term import Literal as RDFLiteral
-from rdflib.term import URIRef
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,16 @@ SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
 type Kind = Literal["vocabulary", "concept", "collection"]
 type LabelProperty = Literal["prefLabel", "altLabel"]
 type RelationProperty = Literal["broader", "narrower", "related"]
+
+# The properties a resource or agent may be named by, the first one used winning.
+NAME_PROPERTIES = (
+    SKOS.prefLabel,
+    FOAF.name,
+    URIRef("https://schema.org/name"),
+    URIRef("http://schema.org/name"),
+    RDFS.label,
+    DCTERMS.title,
+)
 
 # The first kind a URI is typed with wins, in this order.
 KIND_TYPES: tuple[tuple[Kind, tuple[URIRef, ...]], ...] = (
@@ -149,6 +159,8 @@ class Vocabularies:
             logger.warning("Cannot read vocabulary file %s: %s", path, error)
             return False
         self.graph += single
+        for prefix, namespace in single.namespaces():
+            self.graph.bind(prefix, namespace, override=False)
         return True
 
     def find_resources(self) -> dict[str, Kind]:
@@ -198,12 +210,48 @@ class Vocabularies:
         Returns:
             The text to title the resource's page and links to it with.
         """
-        labels = self.labels(uri, "prefLabel")
+        return self.choose(self.labels(uri, "prefLabel"), language) or uri
+
+    def name(self, uri: str, language: str) -> str:
+        """Return the text a URI is shown by where it is linked to.
+
+        A resource is shown by its title. Anything else is shown by the first
+        of ``skos:prefLabel``, ``foaf:name``, ``schema:name``, ``rdfs:label``
+        and ``dcterms:title`` the files state for it, chosen by language as a
+        title is, and failing those by the URI.
+
+        Args:
+            uri: The URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The text to link to the URI with.
+        """
+        if uri in self.resources:
+            return self.title(uri, language)
+        for predicate in NAME_PROPERTIES:
+            chosen = self.choose(self.read_literals(uri, predicate), language)
+            if chosen is not None:
+                return chosen
+        return uri
+
+    @staticmethod
+    def choose(labels: list[Label], language: str) -> str | None:
+        """Return the text of the label in ``language``, else the first label.
+
+        Args:
+            labels: The labels, sorted by language tag and then text.
+            language: The site's ``language`` setting. It matches a language tag
+                whatever the case, and ``_`` counts as ``-``.
+
+        Returns:
+            The text, or ``None`` when there is no label.
+        """
         wanted = language.lower().replace("_", "-")
         for label in labels:
             if label.language.lower() == wanted:
                 return label.text
-        return labels[0].text if labels else uri
+        return labels[0].text if labels else None
 
     def labels(self, uri: str, property_: LabelProperty) -> list[Label]:
         """Return the preferred or alternative labels of a resource.
@@ -230,28 +278,6 @@ class Vocabularies:
         """
         return self.read_literals(uri, SKOS.definition)
 
-    def descriptions(self, uri: str) -> list[Label]:
-        """Return the ``dcterms:description`` texts of a resource.
-
-        Args:
-            uri: The resource's URI.
-
-        Returns:
-            The descriptions, sorted by language tag and then text.
-        """
-        return self.read_literals(uri, DCTERMS.description)
-
-    def notations(self, uri: str) -> list[str]:
-        """Return the notations of a resource.
-
-        Args:
-            uri: The resource's URI.
-
-        Returns:
-            The notations, sorted.
-        """
-        return sorted(label.text for label in self.read_literals(uri, SKOS.notation))
-
     def read_literals(self, uri: str, predicate: URIRef) -> list[Label]:
         """Return the literal objects of one property of a resource.
 
@@ -270,6 +296,94 @@ class Vocabularies:
             ),
             key=lambda label: (label.language, label.text),
         )
+
+    def statements(self, subject: Node) -> dict[URIRef, list[Node]]:
+        """Return what a resource or blank node states, by property.
+
+        Hidden labels are never returned.
+
+        Args:
+            subject: The resource's URI, or a blank node.
+
+        Returns:
+            The objects of each property the subject states, in no set order.
+        """
+        found: dict[URIRef, list[Node]] = {}
+        for predicate, value in self.graph.predicate_objects(subject):
+            if isinstance(predicate, URIRef) and predicate != SKOS.hiddenLabel:
+                found.setdefault(predicate, []).append(value)
+        return found
+
+    def curie(self, uri: str) -> str:
+        """Return a URI as a prefixed name, using the prefixes of the files.
+
+        Args:
+            uri: The URI.
+
+        Returns:
+            The prefixed name, or the URI when no prefix covers it.
+        """
+        try:
+            return self.graph.namespace_manager.curie(uri, generate=False)
+        except (KeyError, ValueError):
+            return uri
+
+    def sort_values(self, values: Iterable[Node], language: str) -> list[Node]:
+        """Return the objects of a property in the order they are shown in.
+
+        Args:
+            values: The objects.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The URIs, sorted by the text they are shown by and then URI, then
+            the literals, sorted by language tag, datatype and text, then the
+            blank nodes, sorted by what they state. Each is there once.
+        """
+        distinct = set(values)
+        uris = sorted(
+            (value for value in distinct if isinstance(value, URIRef)),
+            key=lambda uri: (self.name(str(uri), language), str(uri)),
+        )
+        literals = sorted(
+            (value for value in distinct if isinstance(value, RDFLiteral)),
+            key=lambda literal: (
+                literal.language or "",
+                str(literal.datatype or ""),
+                str(literal),
+            ),
+        )
+        blanks = sorted(
+            (value for value in distinct if isinstance(value, BNode)),
+            key=lambda blank: self.blank_key(blank, frozenset()),
+        )
+        return [*uris, *literals, *blanks]
+
+    def blank_key(self, blank: BNode, seen: frozenset[BNode]) -> str:
+        """Return a text that orders a blank node the same way on every build.
+
+        Blank node identifiers change from one build to the next, so the key
+        is made from what the node states instead.
+
+        Args:
+            blank: The blank node.
+            seen: The blank nodes already being keyed, so a cycle ends.
+
+        Returns:
+            The node's statements, sorted and joined.
+        """
+        if blank in seen:
+            return ""
+        parts = sorted(
+            f"{predicate} "
+            + (
+                self.blank_key(value, seen | {blank})
+                if isinstance(value, BNode)
+                else value.n3()
+            )
+            for predicate, value in self.graph.predicate_objects(blank)
+        )
+        return "[" + "; ".join(parts) + "]"
 
     def sort_by_title(self, uris: Iterable[str], language: str) -> list[str]:
         """Return URIs once each, ordered by title and then URI.
