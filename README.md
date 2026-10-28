@@ -28,11 +28,11 @@ makes it look.
 
 ## Status
 
-Early. The package installs and registers with Sphinx, but it does not
-yet read vocabularies or generate pages. The configuration below shows where it is going, not
-what it does today.
+Early. The package reads your vocabulary files and writes one Sphinx page for every vocabulary,
+concept and collection, each titled with the resource's label. The rest of each page, the RDF
+copies beside it and the directives for your own pages are still to come.
 
-## Planned usage
+## Usage
 
 ```python
 # conf.py
@@ -41,9 +41,18 @@ skos_vocabularies = ["../vocabularies/*.ttl"]
 skos_base_uri = "https://w3id.org/example/vocabularies/"
 ```
 
-Built with the `dirhtml` builder, a concept's page lives at its URI with `skos_base_uri` removed,
-so a redirect from the URI's domain to the site maps one address directly onto the other. Each
-page has Turtle, JSON-LD, RDF/XML and N-Triples copies beside it.
+Build with the `dirhtml` builder:
+
+```console
+sphinx-build -b dirhtml docs docs/_build/dirhtml
+```
+
+A concept's page lives at its URI with `skos_base_uri` removed, so a redirect from the URI's
+domain to the site maps one address directly onto the other. See [Publish vocabulary files as a
+site](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/how-to/publish-vocabulary-files.md)
+for the steps and
+[Settings](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/settings.md) for what
+each setting accepts.
 
 ## Scope & philosophy
 

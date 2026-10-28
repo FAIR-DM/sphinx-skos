@@ -6,6 +6,16 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The `skos_vocabularies` and `skos_base_uri` settings. The vocabulary files they name are read
+  into one graph when a build starts.
+- A generated page for every vocabulary, concept and collection, at its URI with the base URI
+  removed. A page is titled with its resource. A resource that cannot get a page is named in a
+  build warning.
+- The `skos` domain, with the `skos:vocabulary`, `skos:concept` and `skos:collection`
+  directives.
+
 ## [v0.1.0] - 2026-10-28
 
 ### Added
