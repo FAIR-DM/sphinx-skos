@@ -58,6 +58,23 @@ files written beside each page and
 [Settings](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/settings.md) for what
 each setting accepts.
 
+To publish the site to GitHub Pages, call the workflow this repository ships from a job in your
+own:
+
+```yaml
+jobs:
+  site:
+    uses: FAIR-DM/sphinx-skos/.github/workflows/build-site.yml@v0.3.0
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+```
+
+See [Publish a site to GitHub
+Pages](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/how-to/publish-a-site-to-github-pages.md)
+for its inputs and for building pull requests without deploying them.
+
 ## Scope & philosophy
 
 **What it is.** A Sphinx extension that reads SKOS vocabulary files and turns them into Sphinx
