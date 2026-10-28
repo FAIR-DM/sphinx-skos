@@ -220,6 +220,40 @@ check that the concept's content appears in that page.
 
 ---
 
+### User Story 5 - A site maintainer publishes the site to GitHub Pages from their repository (Priority: P2)
+
+A site maintainer whose vocabulary files are on GitHub adds a job of a few lines to a workflow
+in their repository that calls the workflow sphinx-skos ships. A push to their default branch
+builds the site and deploys it to GitHub Pages, and a pull request can build it without
+deploying it.
+
+**Why this priority**: Every repository that publishes a site would otherwise write the same
+workflow (GOALS.md G5), but a site can be built and hosted without it.
+
+**Independent Test**: Call the workflow from a vocabulary repository's branch, once installing
+from the repository's own dependency group and once from a list of packages, and check that both
+builds pass and upload the site.
+
+**Acceptance Scenarios**:
+
+1. **Given** a repository with a `docs` directory holding the site's `conf.py`, **When** a job
+   calls the workflow with no inputs, **Then** the site is built with `dirhtml`, with warnings
+   treated as errors, using the latest sphinx-skos, and deployed to the repository's GitHub
+   Pages site.
+2. **Given** a job that names the packages to install, such as a pinned sphinx-skos and a theme,
+   **When** the workflow runs, **Then** those packages are installed and nothing else.
+3. **Given** a job that names a dependency group of the repository's `pyproject.toml`, **When**
+   the workflow runs, **Then** the repository's dependencies and that group are installed from
+   its `uv.lock`, and the run fails when `uv.lock` is out of date.
+4. **Given** a job that sets the workflow to build only, **When** the workflow runs, **Then** the
+   site is built and uploaded as the `github-pages` artifact, and nothing is deployed.
+5. **Given** a site whose build emits a warning, **When** the workflow runs, **Then** the run
+   fails before anything is uploaded or deployed.
+6. **Given** a job of the maintainer's own that needs the workflow's job, **When** the build
+   finishes, **Then** that job can download the built site as the `github-pages` artifact.
+
+---
+
 ### Edge Cases
 
 - A resource outside the base URI is still shown on the pages that refer to it, linked to its URI
@@ -331,6 +365,16 @@ check that the concept's content appears in that page.
 - **FR-024**: The extension MUST add no stylesheet, script, HTML template, image, static file or
   theme option, and its pages MUST build without warnings under any Sphinx HTML theme.
   *(US1, US2)*
+
+**Publishing to GitHub Pages**
+
+- **FR-029**: The repository MUST ship a reusable GitHub Actions workflow,
+  `.github/workflows/build-site.yml`, that builds a site with `sphinx-build -b dirhtml -W` and
+  deploys it to GitHub Pages. Its inputs MUST be the docs directory (default `docs`), the Python
+  version, the packages to install (default `sphinx-skos`), a dependency group to install from the
+  repository's `uv.lock` instead, and whether to deploy (default yes). *(US5)*
+- **FR-030**: The workflow MUST upload the built site as the `github-pages` artifact whether or
+  not it deploys. *(US5)*
 
 ### Key Entities
 

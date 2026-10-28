@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A reusable GitHub Actions workflow, `.github/workflows/build-site.yml`, that builds a site with
+  the `dirhtml` builder, with warnings treated as errors, and deploys it to GitHub Pages. It
+  installs a list of packages or the repository's own uv dependency group, and can build without
+  deploying. The built site is uploaded as the `github-pages` artifact.
+
 ## [v0.3.1] - 2026-10-28
 
 ### Fixed
