@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from docutils import nodes
-from rdflib import Graph, Namespace, URIRef
+from rdflib import Graph, Namespace
 from sphinx.testing.util import SphinxTestApp
 
 BASE = "https://example.org/vocab/"
@@ -101,16 +101,11 @@ class TestConceptFacts:
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_the_title_is_the_first_label_by_language_tag_then_text(
-        self, app: SphinxTestApp, rootdir: Path
+        self, app: SphinxTestApp
     ) -> None:
-        graph = Graph().parse(rootdir / "test-facts/vocabularies/facts.ttl")
-        labels = sorted(
-            (label.language or "", str(label))
-            for label in graph.objects(URIRef(BASE + "facts/reverse"), SKOS.prefLabel)
-        )
         app.build()
 
-        assert app.env.titles["facts/reverse"].astext() == labels[0][1]
+        assert app.env.titles["facts/reverse"].astext() == "Beta"
         assert app.env.titles["facts/bare"].astext() == BASE + "facts/bare"
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
