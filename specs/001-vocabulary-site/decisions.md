@@ -150,3 +150,11 @@ with `/index` removed and between generated pages (ARCH-001), script URIs not li
 stylesheet, script or static file (SPEC-005, D26).
 
 **ADR:** none — a record of this feature's design review
+
+## D29 — Relative IRIs resolve against the base URI
+
+A relative IRI in a vocabulary file resolved against the file's own path, so the build machine's
+directory reached every published RDF copy and page. Relative IRIs now resolve against
+`skos_base_uri`, the address the site publishes under.
+
+**ADR:** none — a parsing rule inside `Vocabularies`, documented in the settings reference
