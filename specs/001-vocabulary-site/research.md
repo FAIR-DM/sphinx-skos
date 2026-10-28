@@ -131,7 +131,7 @@ function that translates through the catalogue registered with `app.add_message_
 returns the text unchanged when none is registered.
 
 **Decision.** Every fixed string the extension writes into a page goes through
-`_ = get_translation("sphinx_skos")`. The package ships no translations yet, so it registers no
+`translate = get_translation("sphinx_skos")`. The package ships no translations yet, so it registers no
 catalogue. The test of FR-009 registers a catalogue of its own from the test site's `conf.py`
 `setup()` and checks that a heading comes from it while a vocabulary label equal to the same
 message is left as written.

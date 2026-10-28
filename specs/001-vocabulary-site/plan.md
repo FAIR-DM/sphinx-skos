@@ -174,7 +174,7 @@ suffixes.
    whose scheme, case-insensitive and after leading whitespace, is `javascript`, `data` or
    `vbscript` is shown as text and never linked (decision D27). A literal where a URI was expected
    (an `skos:exactMatch` to a string) is shown as text.
-4. Field names are fixed text through `_ = get_translation("sphinx_skos")`. A label shown with its
+4. Field names are fixed text through `translate = get_translation("sphinx_skos")`. A label shown with its
    language puts the tag in its own text node beside the label. A label with no tag shows no tag.
    Vocabulary text only ever goes into `nodes.Text`.
 

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sphinx_skos.domain import SKOSDomain
 
 logger = logging.getLogger(__name__)
-_ = get_translation("sphinx_skos")
+translate = get_translation("sphinx_skos")
 
 
 class ResourceDirective(SphinxDirective):
@@ -59,7 +59,7 @@ class ResourceDirective(SphinxDirective):
             A field list with a field only where the resource has a value,
             except the URI, which is always there.
         """
-        return nodes.field_list("", self.field(_("URI"), [nodes.Text(uri)]))
+        return nodes.field_list("", self.field(translate("URI"), [nodes.Text(uri)]))
 
     def field(self, name: str, *values: list[nodes.Node]) -> nodes.field:
         """Return a field with one paragraph for each value.
@@ -118,16 +118,19 @@ class ConceptDirective(ResourceDirective):
         vocabularies = self.vocabularies
         facts: list[tuple[str, list[list[nodes.Node]]]] = [
             (
-                _("Preferred labels"),
+                translate("Preferred labels"),
                 self.label_values(vocabularies.labels(uri, "prefLabel")),
             ),
             (
-                _("Alternative labels"),
+                translate("Alternative labels"),
                 self.label_values(vocabularies.labels(uri, "altLabel")),
             ),
-            (_("Definitions"), self.label_values(vocabularies.definitions(uri))),
             (
-                _("Notations"),
+                translate("Definitions"),
+                self.label_values(vocabularies.definitions(uri)),
+            ),
+            (
+                translate("Notations"),
                 [[nodes.Text(text)] for text in vocabularies.notations(uri)],
             ),
         ]
