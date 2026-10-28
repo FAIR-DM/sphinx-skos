@@ -338,3 +338,113 @@ class TestConceptLinksOutsideTheBaseUri:
 
         links = field_links(app, BASE + "out/inside")
         assert ["https://elsewhere.example/typed"] in links
+
+
+class TestVocabularyPage:
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_it_shows_its_label_definition_and_description(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        paragraphs = field_paragraphs(app, "rel")
+        assert any(has_tag(p, "Relations", "en") for p in paragraphs)
+        assert any(has_tag(p, "The relations.", "en") for p in paragraphs)
+        assert any(has_tag(p, "Describes the relations.", "en") for p in paragraphs)
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_the_description_is_a_field_of_its_own_beside_the_definition(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        fields = list(app.env.get_doctree("rel").findall(nodes.field))
+        holding = [
+            field
+            for text in ("The relations.", "Describes the relations.")
+            for field in fields
+            if text in field.astext()
+        ]
+        assert len(holding) == 2
+        assert holding[0] is not holding[1]
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_every_concept_in_it_is_linked_in_the_computed_order(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        titles = graph_titles(rootdir, "test-relations")
+        concepts = rel(
+            "rel/hub",
+            "rel/r2",
+            "rel/pb2",
+            "rel/n2",
+            "rel/r1",
+            "rel/n1",
+            "rel/pb1",
+            "rel/top",
+            "rel/top2",
+        )
+        expected = hrefs(app, BASE + "rel", computed_order(titles, concepts))
+        app.build()
+
+        assert expected in field_links(app, BASE + "rel")
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_every_collection_in_it_is_linked_whether_it_says_so_or_a_member_does(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        titles = graph_titles(rootdir, "test-relations")
+        collections = rel("rel/col-a", "rel/col-b", "rel/col-c")
+        expected = hrefs(app, BASE + "rel", computed_order(titles, collections))
+        app.build()
+
+        assert expected in field_links(app, BASE + "rel")
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_a_vocabulary_with_no_concept_or_collection_builds_clean(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert not any(field_links(app, BASE + "rel-empty"))
+        assert field_paragraphs(app, "rel-empty")[0] == [BASE + "rel-empty"]
+        assert app.warning.getvalue() == ""
+
+
+class TestCollectionPage:
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_it_shows_its_label(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert any(
+            has_tag(p, "Beta set", "en") for p in field_paragraphs(app, "rel/col-b")
+        )
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_an_ordered_collection_links_its_members_in_list_order(
+        self, app: SphinxTestApp
+    ) -> None:
+        collection = BASE + "rel/col-a"
+        expected = hrefs(app, collection, rel("rel/r1", "rel/pb2", "rel/hub"))
+        app.build()
+
+        assert expected in field_links(app, collection)
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_an_unordered_collection_links_its_members_in_the_computed_order(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        collection = BASE + "rel/col-b"
+        titles = graph_titles(rootdir, "test-relations")
+        members = rel("rel/hub", "rel/pb2", "rel/n2")
+        expected = hrefs(app, collection, computed_order(titles, members))
+        app.build()
+
+        assert expected != hrefs(app, collection, members)
+        assert expected in field_links(app, collection)
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_a_collection_with_no_member_builds_clean(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert not any(field_links(app, BASE + "rel/col-c"))

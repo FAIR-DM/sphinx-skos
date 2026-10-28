@@ -302,3 +302,55 @@ class TestVocabulariesRelations:
             Target("https://elsewhere.example/outside", True),
             Target("plain text", False),
         ]
+
+    def test_a_vocabulary_holds_the_concepts_that_say_so_and_its_top_concepts(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        found = vocabularies.concepts_in(BASE + "rel", "en")
+
+        assert sorted(found) == sorted(
+            BASE + name
+            for name in (
+                "rel/hub",
+                "rel/r1",
+                "rel/r2",
+                "rel/n1",
+                "rel/n2",
+                "rel/pb1",
+                "rel/pb2",
+                "rel/top",
+                "rel/top2",
+            )
+        )
+        assert vocabularies.concepts_in(BASE + "rel-empty", "en") == []
+
+    def test_a_collection_is_in_a_vocabulary_by_statement_or_by_member(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        found = vocabularies.collections_in(BASE + "rel", "en")
+
+        assert sorted(found) == sorted(
+            BASE + name for name in ("rel/col-a", "rel/col-b", "rel/col-c")
+        )
+        assert vocabularies.collections_in(BASE + "rel-other", "en") == []
+
+    def test_members_come_in_list_order_when_the_collection_is_ordered(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        found = vocabularies.members_of(BASE + "rel/col-a", "en")
+
+        assert found == [BASE + name for name in ("rel/r1", "rel/pb2", "rel/hub")]
+
+    def test_members_come_sorted_by_title_when_the_collection_is_unordered(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        found = vocabularies.members_of(BASE + "rel/col-b", "en")
+
+        assert found == [BASE + name for name in ("rel/pb2", "rel/n2", "rel/hub")]
+
+    def test_descriptions_are_the_dcterms_literals_of_a_resource(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        assert vocabularies.descriptions(BASE + "rel") == [
+            Label("Describes the relations.", "en")
+        ]

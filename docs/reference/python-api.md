@@ -35,15 +35,18 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : The site's vocabulary files read into one `rdflib.Graph`. Its attributes are `patterns`, `graph`,
   `fingerprint` (a SHA-256 digest of the files read) and `resources` (the kind of each vocabulary,
   concept and collection, by URI). Its methods read SKOS facts from the graph: `title(uri, language)`,
-  `labels(uri, property_)` for the preferred or alternative labels, `definitions(uri)` and
-  `notations(uri)`. Labels and definitions come as `Label`s sorted by language tag, then text.
+  `labels(uri, property_)` for the preferred or alternative labels, `definitions(uri)`,
+  `descriptions(uri)` for `dcterms:description` and `notations(uri)`. Labels and definitions come as `Label`s sorted by language tag, then text.
   `read_literals(uri, predicate)` reads any property's literals the same way.
 
   The methods that return resources give URIs sorted by title, then URI, and take the site's
   `language` for the title: `vocabularies_of(concept, language)` (by `skos:inScheme`,
   `skos:topConceptOf` or the vocabulary's `skos:hasTopConcept`), `collections_of(concept,
   language)`, `relations(concept, property_, language)` for broader, narrower or related stated on
-  either concept, and `mappings(concept, language)`, which gives each mapping property the concept
+  either concept, and `concepts_in(vocabulary, language)` and `collections_in(vocabulary, language)` (a collection is in
+  a vocabulary when it states `skos:inScheme` for it or a member is a concept in it),
+  `members_of(collection, language)` (list order for an ordered collection, else by title), and
+  `mappings(concept, language)`, which gives each mapping property the concept
   uses with its `Target`s. `sort_by_title(uris, language)` applies that order to any URIs.
   `uri_objects(subject, predicate)` and `uri_subjects(predicate, object_)` read the URIs a
   property points at or comes from. `listed_members(collection)` gives an ordered collection's
@@ -93,7 +96,9 @@ warnings take part in Sphinx's warning handling, including `-W`.
   `Vocabularies` of the build in progress and `pages` its `GeneratedPages`.
 
 `VocabularyDirective`, `ConceptDirective`, `CollectionDirective`
-: The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. A concept's page shows
+: The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. A vocabulary's page shows its URI, labels, definitions, descriptions and links to its concepts and
+  collections, and a collection's page its URI, labels, definitions and links to its members. A
+  concept's page shows
   its URI, preferred and alternative labels, definitions, notations, vocabulary, collections,
   broader, narrower and related concepts, and one field for each mapping property it uses. Each of
   those that names a resource links to it. A field appears only when the concept has a value for it, and hidden labels are never shown. The names of the fields are

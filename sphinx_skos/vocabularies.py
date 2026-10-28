@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Literal, NamedTuple
 
-from rdflib import RDF, Graph, Namespace
+from rdflib import DCTERMS, RDF, Graph, Namespace
 from rdflib.term import Literal as RDFLiteral
 from rdflib.term import URIRef
 from sphinx.util import logging
@@ -203,6 +203,17 @@ class Vocabularies:
         """
         return self.read_literals(uri, SKOS.definition)
 
+    def descriptions(self, uri: str) -> list[Label]:
+        """Return the ``dcterms:description`` texts of a resource.
+
+        Args:
+            uri: The resource's URI.
+
+        Returns:
+            The descriptions, sorted by language tag and then text.
+        """
+        return self.read_literals(uri, DCTERMS.description)
+
     def notations(self, uri: str) -> list[str]:
         """Return the notations of a resource.
 
@@ -394,3 +405,63 @@ class Vocabularies:
             if targets:
                 found.append((name, targets))
         return found
+
+    def concepts_in(self, vocabulary: str, language: str) -> list[str]:
+        """Return the concepts in a vocabulary.
+
+        Args:
+            vocabulary: The vocabulary's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The concepts that state ``skos:inScheme`` or ``skos:topConceptOf``
+            for the vocabulary or that it names with ``skos:hasTopConcept``,
+            sorted by title and then URI.
+        """
+        named = (
+            self.uri_subjects(SKOS.inScheme, vocabulary)
+            | self.uri_subjects(SKOS.topConceptOf, vocabulary)
+            | self.uri_objects(vocabulary, SKOS.hasTopConcept)
+        )
+        return self.sort_by_title(
+            (uri for uri in named if self.resources.get(uri) == "concept"), language
+        )
+
+    def collections_in(self, vocabulary: str, language: str) -> list[str]:
+        """Return the collections in a vocabulary.
+
+        Args:
+            vocabulary: The vocabulary's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The collections that state ``skos:inScheme`` for the vocabulary or
+            have a member that is a concept in it, sorted by title and then URI.
+        """
+        concepts = set(self.concepts_in(vocabulary, language))
+        stated = self.uri_subjects(SKOS.inScheme, vocabulary)
+        return self.sort_by_title(
+            (
+                uri
+                for uri, kind in self.resources.items()
+                if kind == "collection"
+                and (uri in stated or concepts & self.all_members(uri))
+            ),
+            language,
+        )
+
+    def members_of(self, collection: str, language: str) -> list[str]:
+        """Return the members of a collection.
+
+        Args:
+            collection: The collection's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The members of an ordered collection in list order, followed by any
+            other ``skos:member``. Members of an unordered collection are
+            sorted by title and then URI.
+        """
+        listed = self.listed_members(collection)
+        others = self.uri_objects(collection, SKOS.member) - set(listed)
+        return [*listed, *self.sort_by_title(others, language)]

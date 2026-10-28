@@ -200,6 +200,33 @@ class VocabularyDirective(ResourceDirective):
 
     kind = "vocabulary"
 
+    def facts(self, uri: str) -> Facts:
+        """Add the descriptions, concepts and collections of the vocabulary.
+
+        Args:
+            uri: The vocabulary's URI.
+
+        Returns:
+            The vocabulary's facts.
+        """
+        vocabularies = self.vocabularies
+        language = self.config.language
+        return [
+            *super().facts(uri),
+            (
+                translate("Descriptions"),
+                self.label_values(vocabularies.descriptions(uri)),
+            ),
+            (
+                translate("Concepts"),
+                self.links(vocabularies.concepts_in(uri, language)),
+            ),
+            (
+                translate("Collections"),
+                self.links(vocabularies.collections_in(uri, language)),
+            ),
+        ]
+
 
 class ConceptDirective(ResourceDirective):
     """Show a concept."""
@@ -261,3 +288,15 @@ class CollectionDirective(ResourceDirective):
     """Show a collection."""
 
     kind = "collection"
+
+    def facts(self, uri: str) -> Facts:
+        """Add the members of the collection.
+
+        Args:
+            uri: The collection's URI.
+
+        Returns:
+            The collection's facts.
+        """
+        members = self.vocabularies.members_of(uri, self.config.language)
+        return [*super().facts(uri), (translate("Members"), self.links(members))]
