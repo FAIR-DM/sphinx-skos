@@ -36,8 +36,9 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 ## Module `sphinx_skos.vocabularies`
 
-`Vocabularies(patterns, confdir)`
-: The site's vocabulary files read into one `rdflib.Graph`. Its attributes are `patterns`, `graph`,
+`Vocabularies(patterns, confdir, base_uri)`
+: The site's vocabulary files read into one `rdflib.Graph`. A relative IRI in a file resolves against
+  `base_uri` (default `""`: it stays relative). Its attributes are `patterns`, `base_uri`, `graph`,
   `fingerprint` (a SHA-256 digest of the files read) and `resources` (the kind of each vocabulary,
   concept and collection, by URI). Its methods read SKOS facts from the graph: `title(uri, language)`,
   `labels(uri, property_)` for the preferred or alternative labels, `definitions(uri)`,

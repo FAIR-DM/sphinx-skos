@@ -75,21 +75,28 @@ class Vocabularies:
         patterns: Glob patterns naming vocabulary files. A relative pattern is
             read from ``confdir``.
         confdir: The directory holding the site's ``conf.py``.
+        base_uri: The ``skos_base_uri`` setting. A relative IRI in a file is
+            resolved against it. When it is empty, relative IRIs stay relative.
 
     Attributes:
         patterns: The glob patterns the files were found with.
+        base_uri: The base URI relative IRIs are resolved against.
         graph: Every statement of every file that could be read.
         fingerprint: A SHA-256 digest of the path and bytes of each file read.
         resources: The kind of each vocabulary, concept and collection, by URI.
     """
 
     patterns: list[str]
+    base_uri: str
     graph: Graph
     fingerprint: str
     resources: dict[str, Kind]
 
-    def __init__(self, patterns: Sequence[str], confdir: str | Path) -> None:
+    def __init__(
+        self, patterns: Sequence[str], confdir: str | Path, base_uri: str = ""
+    ) -> None:
         self.patterns = list(patterns)
+        self.base_uri = base_uri
         self.graph = Graph()
         digest = hashlib.sha256()
         for path in self.find_files(patterns, confdir):
@@ -129,7 +136,7 @@ class Vocabularies:
         A file that fails to parse adds nothing and is named in a warning.
 
         Args:
-            path: The file, for the warning and for relative URIs in it.
+            path: The file, for the warning.
             data: The file's bytes.
 
         Returns:
@@ -137,7 +144,7 @@ class Vocabularies:
         """
         single = Graph()
         try:
-            single.parse(data=data, format="turtle", publicID=path.as_uri())
+            single.parse(data=data, format="turtle", publicID=self.base_uri or None)
         except Exception as error:
             logger.warning("Cannot read vocabulary file %s: %s", path, error)
             return False

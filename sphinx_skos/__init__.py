@@ -51,7 +51,9 @@ def generate_pages(app: Sphinx) -> None:
     Args:
         app: The Sphinx application building the site.
     """
-    vocabularies = Vocabularies(app.config.skos_vocabularies, app.confdir)
+    vocabularies = Vocabularies(
+        app.config.skos_vocabularies, app.confdir, app.config.skos_base_uri
+    )
     pages = GeneratedPages(
         vocabularies,
         app.config.skos_base_uri,

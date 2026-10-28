@@ -274,3 +274,25 @@ class TestAlternateLinks:
 
         assert names[0] == names[1]
         assert len(names[0]) == len(ADDRESSES) * len(FORMATS)
+
+
+class TestRelativeIris:
+    @pytest.mark.sphinx("dirhtml", testroot="relative-iri")
+    def test_a_relative_iri_resolves_against_the_base_uri_in_copies_and_page(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        published = [
+            path
+            for path in Path(app.outdir).rglob("*")
+            if path.is_file()
+            and path.suffix in {".html", ".ttl", ".jsonld", ".rdf", ".nt"}
+        ]
+        assert published
+        for path in published:
+            assert "file:" not in path.read_text(encoding="utf-8")
+        copy = Path(app.outdir) / "thing" / "index.nt"
+        assert "<https://example.org/vocab/other-thing>" in copy.read_text(
+            encoding="utf-8"
+        )

@@ -32,6 +32,9 @@ URI with this string removed. Under the `dirhtml` builder the page is at that ad
 directory, so `https://example.org/vocab/` and the URI `https://example.org/vocab/a/b` give the page
 `a/b/`.
 
+A relative IRI in a vocabulary file, such as `<other-thing>`, resolves against this string, not
+against the file's location.
+
 When `skos_vocabularies` is set and `skos_base_uri` is not, the build gives one warning and
 generates no page.
 
