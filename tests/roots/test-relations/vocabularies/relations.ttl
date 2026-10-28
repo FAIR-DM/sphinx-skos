@@ -1,0 +1,76 @@
+@base <https://example.org/vocab/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<rel/hub> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Hub"@en ;
+    skos:broader <rel/pb1> ;
+    skos:narrower <rel/n1> ;
+    skos:related <rel/r1> ;
+    skos:exactMatch <rel-other/mapped>, <https://elsewhere.example/outside>, "plain text" ;
+    skos:closeMatch <JaVaScript:alert(1)>, <data:text/plain,x> .
+
+<rel/r2> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Charlie"@en ;
+    skos:related <rel/hub> .
+
+<rel/pb2> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Alpha"@en ;
+    skos:narrower <rel/hub> .
+
+<rel/n2> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Bravo"@en ;
+    skos:broader <rel/hub> .
+
+<rel/r1> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Yankee"@en .
+
+<rel/n1> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Xray"@en .
+
+<rel/pb1> a skos:Concept ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Zulu"@en .
+
+<rel/top> a skos:Concept ;
+    skos:topConceptOf <rel> ;
+    skos:prefLabel "Top"@en .
+
+<rel/top2> a skos:Concept .
+
+<rel/loose> a skos:Concept ;
+    skos:prefLabel "Loose"@en .
+
+<rel-other/mapped> a skos:Concept ;
+    skos:inScheme <rel-other> ;
+    skos:prefLabel "Mapped"@en .
+
+<rel-other> a skos:ConceptScheme ;
+    skos:prefLabel "Other"@en .
+
+<rel-empty> a skos:ConceptScheme ;
+    skos:prefLabel "Empty"@en .
+
+<rel> a skos:ConceptScheme ;
+    skos:prefLabel "Relations"@en ;
+    skos:definition "The relations."@en ;
+    dcterms:description "Describes the relations."@en ;
+    skos:hasTopConcept <rel/top2> .
+
+<rel/col-c> a skos:Collection ;
+    skos:inScheme <rel> ;
+    skos:prefLabel "Empty set"@en .
+
+<rel/col-b> a skos:Collection ;
+    skos:prefLabel "Beta set"@en ;
+    skos:member <rel/hub>, <rel/pb2>, <rel/n2> .
+
+<rel/col-a> a skos:OrderedCollection ;
+    skos:prefLabel "Ordered set"@en ;
+    skos:memberList ( <rel/r1> <rel/pb2> <rel/hub> ) .

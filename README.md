@@ -28,11 +28,13 @@ makes it look.
 
 ## Status
 
-Early. The package installs and registers with Sphinx, but it does not
-yet read vocabularies or generate pages. The configuration below shows where it is going, not
-what it does today.
+Early. The package reads your vocabulary files and writes one Sphinx page for every vocabulary,
+concept and collection, each with its facts and links, and writes that resource's own RDF beside
+it in Turtle, JSON-LD, RDF/XML and N-Triples, named in the page's head with `<link rel="alternate">`
+elements. Your own pages can show any resource with the `skos:vocabulary`, `skos:concept` and
+`skos:collection` directives.
 
-## Planned usage
+## Usage
 
 ```python
 # conf.py
@@ -41,9 +43,20 @@ skos_vocabularies = ["../vocabularies/*.ttl"]
 skos_base_uri = "https://w3id.org/example/vocabularies/"
 ```
 
-Built with the `dirhtml` builder, a concept's page lives at its URI with `skos_base_uri` removed,
-so a redirect from the URI's domain to the site maps one address directly onto the other. Each
-page has Turtle, JSON-LD, RDF/XML and N-Triples copies beside it.
+Build with the `dirhtml` builder:
+
+```console
+sphinx-build -b dirhtml docs docs/_build/dirhtml
+```
+
+A concept's page lives at its URI with `skos_base_uri` removed, so a redirect from the URI's
+domain to the site maps one address directly onto the other. See [Publish vocabulary files as a
+site](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/how-to/publish-vocabulary-files.md)
+for the steps, [RDF
+copies](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/rdf-copies.md) for the
+files written beside each page and
+[Settings](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/settings.md) for what
+each setting accepts.
 
 ## Scope & philosophy
 

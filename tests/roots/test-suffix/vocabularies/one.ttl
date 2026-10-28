@@ -1,0 +1,4 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/one> a skos:ConceptScheme .
+<https://example.org/vocab/one/first> a skos:Concept .

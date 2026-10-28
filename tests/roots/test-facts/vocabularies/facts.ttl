@@ -1,0 +1,17 @@
+@base <https://example.org/vocab/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<facts/rich> a skos:Concept ;
+    skos:prefLabel "Rich"@en, "Reich"@de ;
+    skos:altLabel "Wealthy"@en, "Vermögend"@de, "Plain" ;
+    skos:hiddenLabel "secretword"@en ;
+    skos:definition "Having much money."@en, "Mit viel Geld."@de ;
+    skos:notation "R1" .
+
+<facts/reverse> a skos:Concept ;
+    skos:prefLabel "Zebra"@fr, "Beta"@fr, "Alpha"@nl .
+
+<facts/bare> a skos:Concept .
+
+<facts/markup> a skos:Concept ;
+    skos:prefLabel "<b>&amp;</b>"@en .

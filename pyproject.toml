@@ -22,6 +22,8 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "docutils>=0.21",
+    "rdflib>=7.6",
     "sphinx>=9.0",
 ]
 
@@ -34,12 +36,14 @@ changelog = "https://github.com/FAIR-DM/sphinx-skos/blob/main/CHANGELOG.md"
 [dependency-groups]
 dev = [
     "deptry>=0.25.1",
+    "furo>=2025.12.19",
     "mypy>=2.3.1",
     "pre-commit>=4.6.2",
     "pydoclint>=0.10.1",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.22",
+    "types-docutils>=0.23.0.20260923",
 ]
 
 [build-system]

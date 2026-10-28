@@ -1,0 +1,6 @@
+@base <https://example.org/vocab/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<link/from> a skos:Concept ;
+    skos:prefLabel "From"@en ;
+    skos:related <link/to> .

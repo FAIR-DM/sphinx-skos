@@ -1,0 +1,7 @@
+Prose
+=====
+
+.. toctree::
+
+   guide
+   sections
