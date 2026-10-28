@@ -212,6 +212,19 @@ class TestVocabulariesTitle:
         assert vocabularies.title(BASE + "c", "en") == "Beta"
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_language_setting_matches_a_label_tag_whatever_its_case_or_separator(
+        self, app: SphinxTestApp, tmp_path: Path
+    ) -> None:
+        concept = tmp_path / "concept.ttl"
+        concept.write_text(
+            f'<{BASE}c> <{SKOS}prefLabel> "Hi"@en, "Hallo"@pt-BR .\n',
+            encoding="utf-8",
+        )
+        vocabularies = Vocabularies([str(concept)], app.confdir)
+
+        assert vocabularies.title(BASE + "c", "pt_BR") == "Hallo"
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_without_a_preferred_label_the_title_is_the_uri(
         self, app: SphinxTestApp, tmp_path: Path
     ) -> None:

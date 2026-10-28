@@ -192,14 +192,16 @@ class Vocabularies:
 
         Args:
             uri: The resource's URI.
-            language: The site's ``language`` setting.
+            language: The site's ``language`` setting. It matches a language tag
+                whatever the case, and ``_`` counts as ``-``.
 
         Returns:
             The text to title the resource's page and links to it with.
         """
         labels = self.labels(uri, "prefLabel")
+        wanted = language.lower().replace("_", "-")
         for label in labels:
-            if label.language.lower() == language.lower():
+            if label.language.lower() == wanted:
                 return label.text
         return labels[0].text if labels else uri
 
