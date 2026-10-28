@@ -1,10 +1,11 @@
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from rdflib import Namespace, URIRef
 from sphinx.testing.util import SphinxTestApp
 
-from sphinx_skos.vocabularies import Label, Vocabularies
+from sphinx_skos.vocabularies import Label, Target, Vocabularies
 
 BASE = "https://example.org/vocab/"
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
@@ -248,3 +249,56 @@ class TestVocabulariesFacts:
         assert vocabularies.labels(BASE + "facts/bare", "prefLabel") == []
         assert vocabularies.definitions(BASE + "facts/bare") == []
         assert vocabularies.notations(BASE + "facts/bare") == []
+
+
+class TestVocabulariesRelations:
+    @pytest.fixture
+    def vocabularies(self, rootdir: Path) -> Vocabularies:
+        return Vocabularies(["vocabularies/*.ttl"], rootdir / "test-relations")
+
+    def test_a_concepts_vocabularies_come_from_either_way_of_stating_them(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        assert vocabularies.vocabularies_of(BASE + "rel/hub", "en") == [BASE + "rel"]
+        assert vocabularies.vocabularies_of(BASE + "rel/top", "en") == [BASE + "rel"]
+        assert vocabularies.vocabularies_of(BASE + "rel/top2", "en") == [BASE + "rel"]
+        assert vocabularies.vocabularies_of(BASE + "rel/loose", "en") == []
+
+    def test_a_concepts_collections_include_those_that_list_it(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        assert vocabularies.collections_of(BASE + "rel/hub", "en") == [
+            BASE + "rel/col-b",
+            BASE + "rel/col-a",
+        ]
+        assert vocabularies.collections_of(BASE + "rel/loose", "en") == []
+
+    @pytest.mark.parametrize(
+        ("property_", "expected"),
+        [
+            ("broader", ["rel/pb2", "rel/pb1"]),
+            ("narrower", ["rel/n2", "rel/n1"]),
+            ("related", ["rel/r2", "rel/r1"]),
+        ],
+    )
+    def test_a_relation_is_read_whichever_concept_states_it(
+        self,
+        vocabularies: Vocabularies,
+        property_: Literal["broader", "narrower", "related"],
+        expected: list[str],
+    ) -> None:
+        found = vocabularies.relations(BASE + "rel/hub", property_, "en")
+
+        assert found == [BASE + name for name in expected]
+
+    def test_mappings_come_per_property_with_a_literal_marked_as_no_uri(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        found = dict(vocabularies.mappings(BASE + "rel/hub", "en"))
+
+        assert list(found) == ["exactMatch", "closeMatch"]
+        assert found["exactMatch"] == [
+            Target(BASE + "rel-other/mapped", True),
+            Target("https://elsewhere.example/outside", True),
+            Target("plain text", False),
+        ]

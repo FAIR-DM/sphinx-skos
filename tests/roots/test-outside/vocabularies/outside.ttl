@@ -1,0 +1,8 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/out/inside> a skos:Concept ;
+    skos:prefLabel "Inside"@en ;
+    skos:broader <https://elsewhere.example/typed> .
+
+<https://elsewhere.example/typed> a skos:Concept ;
+    skos:prefLabel "Typed"@en .

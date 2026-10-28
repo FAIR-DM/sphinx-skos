@@ -3,7 +3,7 @@
 import glob
 import hashlib
 import os
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Literal, NamedTuple
 
@@ -18,6 +18,7 @@ SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
 
 type Kind = Literal["vocabulary", "concept", "collection"]
 type LabelProperty = Literal["prefLabel", "altLabel"]
+type RelationProperty = Literal["broader", "narrower", "related"]
 
 # The first kind a URI is typed with wins, in this order.
 KIND_TYPES: tuple[tuple[Kind, tuple[URIRef, ...]], ...] = (
@@ -37,6 +38,34 @@ class Label(NamedTuple):
 
     text: str
     language: str
+
+
+# A relation as (the property that states it, the property that states it
+# from the other concept).
+RELATIONS: dict[RelationProperty, tuple[URIRef, URIRef]] = {
+    "broader": (SKOS.broader, SKOS.narrower),
+    "narrower": (SKOS.narrower, SKOS.broader),
+    "related": (SKOS.related, SKOS.related),
+}
+MAPPING_PROPERTIES = (
+    "exactMatch",
+    "closeMatch",
+    "broadMatch",
+    "narrowMatch",
+    "relatedMatch",
+)
+
+
+class Target(NamedTuple):
+    """What a mapping link points at.
+
+    Attributes:
+        value: The URI, or the text of a literal written where a URI belongs.
+        is_uri: Whether ``value`` is a URI.
+    """
+
+    value: str
+    is_uri: bool
 
 
 class Vocabularies:
@@ -203,3 +232,165 @@ class Vocabularies:
             ),
             key=lambda label: (label.language, label.text),
         )
+
+    def sort_by_title(self, uris: Iterable[str], language: str) -> list[str]:
+        """Return URIs once each, ordered by title and then URI.
+
+        Args:
+            uris: The URIs to order.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The distinct URIs, in the order every list of resources is shown in.
+        """
+        return sorted(set(uris), key=lambda uri: (self.title(uri, language), uri))
+
+    def uri_objects(self, subject: str, predicate: URIRef) -> set[str]:
+        """Return the URIs a resource's property points at.
+
+        Args:
+            subject: The resource's URI.
+            predicate: The property to read.
+
+        Returns:
+            The objects that are URIs. Literals and blank nodes are left out.
+        """
+        return {
+            str(value)
+            for value in self.graph.objects(URIRef(subject), predicate)
+            if isinstance(value, URIRef)
+        }
+
+    def uri_subjects(self, predicate: URIRef, object_: str) -> set[str]:
+        """Return the URIs whose property points at a resource.
+
+        Args:
+            predicate: The property to read.
+            object_: The URI pointed at.
+
+        Returns:
+            The subjects that are URIs.
+        """
+        return {
+            str(value)
+            for value in self.graph.subjects(predicate, URIRef(object_))
+            if isinstance(value, URIRef)
+        }
+
+    def vocabularies_of(self, concept: str, language: str) -> list[str]:
+        """Return the vocabularies a concept is in.
+
+        A concept is in a vocabulary when it states ``skos:inScheme`` or
+        ``skos:topConceptOf`` for it, or the vocabulary states
+        ``skos:hasTopConcept`` for the concept.
+
+        Args:
+            concept: The concept's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The vocabularies' URIs, sorted by title and then URI.
+        """
+        return self.sort_by_title(
+            self.uri_objects(concept, SKOS.inScheme)
+            | self.uri_objects(concept, SKOS.topConceptOf)
+            | self.uri_subjects(SKOS.hasTopConcept, concept),
+            language,
+        )
+
+    def listed_members(self, collection: str) -> list[str]:
+        """Return the members an ordered collection lists, in list order.
+
+        Args:
+            collection: The collection's URI.
+
+        Returns:
+            The listed URIs, each once. Empty without a ``skos:memberList``.
+        """
+        head = self.graph.value(URIRef(collection), SKOS.memberList)
+        if head is None:
+            return []
+        return list(
+            dict.fromkeys(
+                str(item) for item in self.graph.items(head) if isinstance(item, URIRef)
+            )
+        )
+
+    def all_members(self, collection: str) -> set[str]:
+        """Return every concept a collection names, listed or not.
+
+        Args:
+            collection: The collection's URI.
+
+        Returns:
+            The URIs named by ``skos:member`` or ``skos:memberList``.
+        """
+        return set(self.listed_members(collection)) | self.uri_objects(
+            collection, SKOS.member
+        )
+
+    def collections_of(self, concept: str, language: str) -> list[str]:
+        """Return the collections that name a concept as a member.
+
+        Args:
+            concept: The concept's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The collections' URIs, sorted by title and then URI.
+        """
+        return self.sort_by_title(
+            (
+                uri
+                for uri, kind in self.resources.items()
+                if kind == "collection" and concept in self.all_members(uri)
+            ),
+            language,
+        )
+
+    def relations(
+        self, concept: str, property_: RelationProperty, language: str
+    ) -> list[str]:
+        """Return the concepts related to a concept, whichever one states it.
+
+        Args:
+            concept: The concept's URI.
+            property_: ``"broader"``, ``"narrower"`` or ``"related"``.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The concepts' URIs, sorted by title and then URI.
+        """
+        own, inverse = RELATIONS[property_]
+        return self.sort_by_title(
+            self.uri_objects(concept, own) | self.uri_subjects(inverse, concept),
+            language,
+        )
+
+    def mappings(self, concept: str, language: str) -> list[tuple[str, list[Target]]]:
+        """Return the mapping links a concept states, for each property used.
+
+        Args:
+            concept: The concept's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            Each mapping property the concept uses, in the order SKOS lists
+            them, with its targets: URIs sorted by title and then URI, then any
+            literals sorted by text.
+        """
+        found = []
+        for name in MAPPING_PROPERTIES:
+            values = list(self.graph.objects(URIRef(concept), SKOS[name]))
+            uris = self.sort_by_title(
+                (str(value) for value in values if isinstance(value, URIRef)),
+                language,
+            )
+            texts = sorted(
+                {str(value) for value in values if isinstance(value, RDFLiteral)}
+            )
+            targets = [Target(uri, True) for uri in uris]
+            targets += [Target(text, False) for text in texts]
+            if targets:
+                found.append((name, targets))
+        return found

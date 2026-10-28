@@ -39,6 +39,16 @@ warnings take part in Sphinx's warning handling, including `-W`.
   `notations(uri)`. Labels and definitions come as `Label`s sorted by language tag, then text.
   `read_literals(uri, predicate)` reads any property's literals the same way.
 
+  The methods that return resources give URIs sorted by title, then URI, and take the site's
+  `language` for the title: `vocabularies_of(concept, language)` (by `skos:inScheme`,
+  `skos:topConceptOf` or the vocabulary's `skos:hasTopConcept`), `collections_of(concept,
+  language)`, `relations(concept, property_, language)` for broader, narrower or related stated on
+  either concept, and `mappings(concept, language)`, which gives each mapping property the concept
+  uses with its `Target`s. `sort_by_title(uris, language)` applies that order to any URIs.
+  `uri_objects(subject, predicate)` and `uri_subjects(predicate, object_)` read the URIs a
+  property points at or comes from. `listed_members(collection)` gives an ordered collection's
+  members in list order and `all_members(collection)` every member it names.
+
 `Kind`
 : The kind of a resource: `"vocabulary"`, `"concept"` or `"collection"`.
 
@@ -48,6 +58,13 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `LabelProperty`
 : Which labels to read: `"prefLabel"` or `"altLabel"`.
+
+`RelationProperty`
+: Which relation to read: `"broader"`, `"narrower"` or `"related"`.
+
+`Target`
+: What a mapping link points at: `value`, and `is_uri`, which is false for a literal written where
+  a URI belongs.
 
 ## Module `sphinx_skos.pages`
 
@@ -68,14 +85,18 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `ResourceDirective`
 : The base of the three directives. It takes a resource URI as its one argument. `fields(uri)`
-  returns the field list shown under the page title, which a subclass extends. `field(name,
-  *values)` builds one field and `label_values(labels)` the paragraphs for labels with their
-  languages. `vocabularies` is the `Vocabularies` of the build in progress.
+  returns the field list shown under the page title: the URI, then the fields `facts(uri)` gives,
+  which a subclass extends. `field(name, *values)` builds one field and `label_values(labels)` the
+  paragraphs for labels with their languages. `link(uri)` shows a URI as a cross-reference to its
+  page, as a link to itself when it has no page, or as plain text when its scheme is `javascript`,
+  `data` or `vbscript`, `links(uris)` does so for each URI and `target_links(targets)` for each `Target` of a mapping link. `vocabularies` is the
+  `Vocabularies` of the build in progress and `pages` its `GeneratedPages`.
 
 `VocabularyDirective`, `ConceptDirective`, `CollectionDirective`
 : The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. A concept's page shows
-  its URI, preferred and alternative labels, definitions and notations. A field appears only when
-  the concept has a value for it, and hidden labels are never shown. The names of the fields are
+  its URI, preferred and alternative labels, definitions, notations, vocabulary, collections,
+  broader, narrower and related concepts, and one field for each mapping property it uses. Each of
+  those that names a resource links to it. A field appears only when the concept has a value for it, and hidden labels are never shown. The names of the fields are
   translated through the `sphinx_skos` message catalogue.
 
 `translate`

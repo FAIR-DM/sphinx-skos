@@ -2,6 +2,7 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path
 
+from sphinx import addnodes
 from sphinx.testing.util import SphinxTestApp
 
 from sphinx_skos.domain import SKOSDomain
@@ -154,3 +155,25 @@ class TestRebuild:
 
         assert sources
         assert {path: path.stat().st_mtime_ns for path in sources} == before
+
+
+class TestRebuildLinks:
+    def test_an_edited_label_shows_on_a_page_in_another_file_that_links_to_it(
+        self, make_app: MakeApp, rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-linked", site)
+        build(make_app, site)
+        path = site / "vocabularies" / "b.ttl"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("Before", "After"),
+            encoding="utf-8",
+        )
+
+        app = build(make_app, site)
+
+        links = list(app.env.get_doctree("link/from").findall(addnodes.pending_xref))
+        assert [link.astext() for link in links] == ["After"]
+        files, trees = clean_build(make_app, site, tmp_path)
+        assert output_files(app) == files
+        assert doctrees(app, app.env.found_docs) == trees

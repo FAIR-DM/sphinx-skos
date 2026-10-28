@@ -1,19 +1,29 @@
 """The directives that turn a resource's URI into content."""
 
+import re
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from docutils import nodes
+from sphinx import addnodes
 from sphinx.locale import get_translation
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxDirective
 
-from sphinx_skos.vocabularies import Kind, Label, Vocabularies
+from sphinx_skos.vocabularies import Kind, Label, Target, Vocabularies
 
 if TYPE_CHECKING:
     from sphinx_skos.domain import SKOSDomain
+    from sphinx_skos.pages import GeneratedPages
 
 logger = logging.getLogger(__name__)
 translate = get_translation("sphinx_skos")
+
+# Browsers run or render these when followed, so they are shown, never linked.
+UNLINKED_SCHEMES = ("javascript", "data", "vbscript")
+SCHEME = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*):")
+IGNORED_BY_BROWSERS = re.compile(r"[\x00-\x20]")
+
+type Facts = list[tuple[str, list[list[nodes.Node]]]]
 
 
 class ResourceDirective(SphinxDirective):
@@ -28,6 +38,11 @@ class ResourceDirective(SphinxDirective):
     def vocabularies(self) -> Vocabularies:
         """The vocabularies of the build in progress."""
         return cast("SKOSDomain", self.env.domains["skos"]).vocabularies
+
+    @property
+    def pages(self) -> "GeneratedPages":
+        """The generated pages of the build in progress."""
+        return cast("SKOSDomain", self.env.domains["skos"]).pages
 
     def run(self) -> list[nodes.Node]:
         """Return a section titled with the resource, or warn why not."""
@@ -59,7 +74,78 @@ class ResourceDirective(SphinxDirective):
             A field list with a field only where the resource has a value,
             except the URI, which is always there.
         """
-        return nodes.field_list("", self.field(translate("URI"), [nodes.Text(uri)]))
+        field_list = nodes.field_list(
+            "", self.field(translate("URI"), [nodes.Text(uri)])
+        )
+        field_list += [
+            self.field(name, *values) for name, values in self.facts(uri) if values
+        ]
+        return field_list
+
+    def facts(self, uri: str) -> Facts:
+        """Return the facts every resource has, after its URI.
+
+        Args:
+            uri: The resource's URI.
+
+        Returns:
+            The name and the paragraphs of each fact, in the order shown.
+        """
+        vocabularies = self.vocabularies
+        return [
+            (
+                translate("Preferred labels"),
+                self.label_values(vocabularies.labels(uri, "prefLabel")),
+            ),
+            (
+                translate("Alternative labels"),
+                self.label_values(vocabularies.labels(uri, "altLabel")),
+            ),
+            (
+                translate("Definitions"),
+                self.label_values(vocabularies.definitions(uri)),
+            ),
+        ]
+
+    def link(self, uri: str) -> list[nodes.Node]:
+        """Return the nodes that show a resource and, where safe, link to it.
+
+        Args:
+            uri: The URI to show.
+
+        Returns:
+            A cross-reference to the page of the resource when it has one,
+            else a link to the URI, else plain text for a URI that runs code or
+            carries data when followed.
+        """
+        scheme = SCHEME.match(IGNORED_BY_BROWSERS.sub("", uri))
+        if scheme and scheme.group(1).lower() in UNLINKED_SCHEMES:
+            return [nodes.Text(uri)]
+        docname = self.pages.docname_for(uri)
+        if docname is None:
+            return [nodes.reference("", uri, refuri=uri)]
+        title = self.vocabularies.title(uri, self.config.language)
+        return [
+            addnodes.pending_xref(
+                "",
+                nodes.Text(title),
+                refdomain="std",
+                reftype="doc",
+                reftarget="/" + docname,
+                refexplicit=True,
+            )
+        ]
+
+    def links(self, uris: list[str]) -> list[list[nodes.Node]]:
+        """Return the nodes of a link for each URI.
+
+        Args:
+            uris: The URIs to show.
+
+        Returns:
+            One list of nodes for each URI, from :meth:`link`.
+        """
+        return [self.link(uri) for uri in uris]
 
     def field(self, name: str, *values: list[nodes.Node]) -> nodes.field:
         """Return a field with one paragraph for each value.
@@ -75,6 +161,21 @@ class ResourceDirective(SphinxDirective):
         return nodes.field(
             "", nodes.field_name("", name), nodes.field_body("", *paragraphs)
         )
+
+    def target_links(self, targets: list[Target]) -> list[list[nodes.Node]]:
+        """Return the nodes of a link for each target of a mapping link.
+
+        Args:
+            targets: The targets to show.
+
+        Returns:
+            One list of nodes for each target: a link for a URI, the text for a
+            literal written where a URI belongs.
+        """
+        return [
+            self.link(target.value) if target.is_uri else [nodes.Text(target.value)]
+            for target in targets
+        ]
 
     def label_values(self, labels: list[Label]) -> list[list[nodes.Node]]:
         """Return the paragraph content of each label, with its language.
@@ -105,37 +206,55 @@ class ConceptDirective(ResourceDirective):
 
     kind = "concept"
 
-    def fields(self, uri: str) -> nodes.field_list:
-        """Add the labels, definitions and notations of the concept.
+    def facts(self, uri: str) -> Facts:
+        """Add the notations and the links of the concept.
 
         Args:
             uri: The concept's URI.
 
         Returns:
-            The concept's field list.
+            The concept's facts.
         """
-        field_list = super().fields(uri)
         vocabularies = self.vocabularies
-        facts: list[tuple[str, list[list[nodes.Node]]]] = [
-            (
-                translate("Preferred labels"),
-                self.label_values(vocabularies.labels(uri, "prefLabel")),
-            ),
-            (
-                translate("Alternative labels"),
-                self.label_values(vocabularies.labels(uri, "altLabel")),
-            ),
-            (
-                translate("Definitions"),
-                self.label_values(vocabularies.definitions(uri)),
-            ),
+        language = self.config.language
+        mappings = {
+            "exactMatch": translate("Exact match"),
+            "closeMatch": translate("Close match"),
+            "broadMatch": translate("Broad match"),
+            "narrowMatch": translate("Narrow match"),
+            "relatedMatch": translate("Related match"),
+        }
+        return [
+            *super().facts(uri),
             (
                 translate("Notations"),
                 [[nodes.Text(text)] for text in vocabularies.notations(uri)],
             ),
+            (
+                translate("Vocabulary"),
+                self.links(vocabularies.vocabularies_of(uri, language)),
+            ),
+            (
+                translate("Collections"),
+                self.links(vocabularies.collections_of(uri, language)),
+            ),
+            (
+                translate("Broader"),
+                self.links(vocabularies.relations(uri, "broader", language)),
+            ),
+            (
+                translate("Narrower"),
+                self.links(vocabularies.relations(uri, "narrower", language)),
+            ),
+            (
+                translate("Related"),
+                self.links(vocabularies.relations(uri, "related", language)),
+            ),
+            *[
+                (mappings[name], self.target_links(targets))
+                for name, targets in vocabularies.mappings(uri, language)
+            ],
         ]
-        field_list += [self.field(name, *values) for name, values in facts if values]
-        return field_list
 
 
 class CollectionDirective(ResourceDirective):
