@@ -268,3 +268,31 @@ The hidden toctree sat beside the directive's section, so a theme drew the conce
 vocabulary rather than beneath it. The directives now parse their content into their section and
 the vocabulary's toctree is written as that content. Test: the resolved navigation nests every
 member's entry inside its vocabulary's entry (US3 scenario 2, SC-004).
+
+#### T016 — The move from 0.3 names the change of default theme
+
+**Files**: `CHANGELOG.md`, `docs/how-to/add-vocabulary-pages-to-a-site.md`
+
+A site that sets no theme moves from alabaster to Furo. The changelog and the move-from-0.3 steps
+say so, and how to keep alabaster. No test: documentation.
+
+#### T017 — Downloads only under builders that write the copies
+
+**Files**: `sphinx_skos/directives.py`, `tests/test_directives.py`, `docs/reference/directives.md`
+
+Under `singlehtml` the download field linked files never written. It is now kept only under `html`
+and `dirhtml`. Test: a `singlehtml` build has no download links.
+
+#### T018 — The command reads only the table of the directory it runs from
+
+**Files**: `sphinx_skos/cli.py`, `tests/test_cli.py`
+
+Run from a subdirectory of a project, the command took the parent's table but built in the
+subdirectory. It now exits 2 there (FR-001, FR-008). Test: a subdirectory exits 2 and builds nothing.
+
+#### T019 — The front page title stays on one line
+
+**Files**: `sphinx_skos/pages.py`, `tests/test_pages.py`
+
+Whitespace in `project` is collapsed before it is written as the front page's title. Test: a
+project name with line breaks and surrounding spaces gives a one-line title and no warning.
