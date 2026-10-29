@@ -549,10 +549,14 @@ class CollectionDirective(ResourceDirective):
         return [*super().facts(uri), (translate("Members"), self.links(members))]
 
 
+PAGE_BUILDERS = ("html", "dirhtml")
+
+
 class DownloadLinks(SphinxPostTransform):
     """Point the download links of a generated page at the files they name.
 
-    The field is removed under a builder that does not write HTML. A
+    The field is removed under a builder that does not write a page per
+    document, because the copies are written only beside such pages. A
     vocabulary's page links its whole files under ``dirhtml`` and its own
     copies otherwise; any other page links its own copies.
     """
@@ -573,7 +577,7 @@ class DownloadLinks(SphinxPostTransform):
         # Sphinx's own post-transforms read the builder this way: the public
         # ``app`` properties are deprecated.
         builder = self.env._app.builder
-        if builder.format != "html":
+        if builder.name not in PAGE_BUILDERS:
             for field in fields:
                 field.parent.remove(field)
             return

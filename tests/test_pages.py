@@ -696,6 +696,19 @@ class TestFrontPage:
 
     @pytest.mark.sphinx(
         "dirhtml",
+        testroot="no-front-page",
+        confoverrides={"project": "  Spread\nover  lines "},
+    )
+    def test_a_project_name_with_surrounding_and_inner_line_breaks_stays_one_title(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.titles["index"].astext() == "Spread over lines"
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx(
+        "dirhtml",
         testroot="suffix",
         srcdir="suffix-with-its-own-index",
         confoverrides={"exclude_patterns": ["_build"]},

@@ -318,7 +318,7 @@ class GeneratedPages:
             The marker line, the site's ``project`` as the title and a list of
             the index and then every document of the site's own, by name.
         """
-        title = escape(self.project)
+        title = escape(" ".join(self.project.split()))
         listed = [self.index_docname] if self.index_docname else []
         return f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n" + self.toctree_of(
             [*listed, *self.site_documents], ":maxdepth: 1"

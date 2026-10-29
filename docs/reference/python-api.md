@@ -202,7 +202,11 @@ warnings take part in Sphinx's warning handling, including `-W`.
 `DownloadLinks`
 : A Sphinx post-transform. As a page is resolved for writing, it points each link of the download
   field at the page's RDF copies, or at the vocabulary's whole files under `dirhtml`, relative to
-  the page, and removes the field under a builder that does not write HTML.
+  the page, and removes the field under a builder that writes no page per document.
+
+`PAGE_BUILDERS`
+: The builders that write a page per document, `html` and `dirhtml`, and so the RDF copies the
+  download field links.
 
 `translate`
 : The function the directives pass their fixed text through: `sphinx.locale.get_translation`

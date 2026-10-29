@@ -42,10 +42,13 @@ class SiteBuild:
         """Build the site.
 
         Returns:
-            Sphinx's exit code, or 2 if the project has no settings to build from.
+            Sphinx's exit code, or 2 if the directory it runs from has neither a
+            settings table of its own nor a ``docs/conf.py``.
         """
         has_conf_py = self.conf_py.is_file()
-        if SiteSettings.find_table(self.root) is None and not has_conf_py:
+        found = SiteSettings.find_table(self.root)
+        has_table = found is not None and found[1] == self.root.resolve()
+        if not has_table and not has_conf_py:
             print(NO_SETTINGS, file=sys.stderr)
             return 2
         source = self.root / "docs"

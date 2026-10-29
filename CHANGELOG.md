@@ -31,6 +31,9 @@ All notable changes to this project are recorded here. The format follows
 - Generated pages are no longer marked `:orphan:`. A site that lists no page that leads to the
   index gets Sphinx's warning that the index is in no table of contents.
 - Pages that an earlier version wrote at the old addresses are deleted at the first build.
+- Furo is installed with the package, and a site that sets no `html_theme` is built with it
+  instead of alabaster. Set `html_theme = "alabaster"` to keep the old look, and remove theme
+  options Furo does not accept.
 
 ## [v0.3.3] - 2026-10-29
 

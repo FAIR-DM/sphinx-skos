@@ -35,9 +35,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 class TestBuildCommand:
     def test_three_keys_and_one_file_build_the_whole_site(self, project: Path) -> None:
-        write_files(
-            project, {"pyproject.toml": THREE_KEYS, "data/one.ttl": VOCABULARY}
-        )
+        write_files(project, {"pyproject.toml": THREE_KEYS, "data/one.ttl": VOCABULARY})
 
         code = main(["build", "-W"])
 
@@ -50,9 +48,7 @@ class TestBuildCommand:
     def test_the_output_option_names_the_directory_of_the_site(
         self, project: Path
     ) -> None:
-        write_files(
-            project, {"pyproject.toml": THREE_KEYS, "data/one.ttl": VOCABULARY}
-        )
+        write_files(project, {"pyproject.toml": THREE_KEYS, "data/one.ttl": VOCABULARY})
 
         code = main(["build", "-o", "out"])
 
@@ -127,3 +123,15 @@ class TestBuildCommand:
         assert code == 2
         assert "[tool.sphinx-skos]" in message
         assert "docs/conf.py" in message
+
+    def test_a_subdirectory_of_a_project_has_no_table_of_its_own(
+        self, project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        write_files(project, {"pyproject.toml": THREE_KEYS, "data/one.ttl": VOCABULARY})
+        (project / "data").mkdir(exist_ok=True)
+        monkeypatch.chdir(project / "data")
+
+        code = main(["build"])
+
+        assert code == 2
+        assert not (project / "data" / "_build").exists()

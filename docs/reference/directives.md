@@ -80,8 +80,8 @@ rdflib knows by default. The field is absent when the files declare none.
 Every generated page ends with a field that links the page's RDF files, one link each for Turtle,
 JSON-LD, RDF/XML and N-Triples. A concept's and a collection's page link their own
 [RDF copies](rdf-copies.md). A vocabulary's page links its whole files under the `dirhtml` builder,
-and its own copies under the `html` builder. Builders that do not write HTML, such as `text`, leave
-the field out. A page written by hand has no download field.
+and its own copies under the `html` builder. Any other builder, such as `singlehtml` or `text`,
+writes no copies, so it leaves the field out. A page written by hand has no download field.
 
 ## What is not written
 

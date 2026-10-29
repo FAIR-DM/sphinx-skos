@@ -52,10 +52,14 @@ the next version they are in `skos_directory`.
    `data/`, and change the patterns in `skos_vocabularies`. The directory is about to hold only
    generated files.
 2. Replace the old `.gitignore` entries, one for each vocabulary, with `vocabularies/`.
-3. Follow the steps above.
-4. Build the site. The build deletes the pages version 0.3 wrote at the old addresses, with their
+3. If `conf.py` sets no `html_theme`, the site is now built with Furo instead of Sphinx's default,
+   alabaster. To keep the old look, set `html_theme = "alabaster"`. Remove any
+   `html_theme_options` that only alabaster accepts, or a build that treats warnings as errors
+   fails.
+4. Follow the steps above.
+5. Build the site. The build deletes the pages version 0.3 wrote at the old addresses, with their
    output, and leaves every file that has no generated-page comment on its first line.
-5. Redirect each old address to the new one, for example `/date-types/available/` to
+6. Redirect each old address to the new one, for example `/date-types/available/` to
    `/vocabularies/date-types/available/`, with the host's redirect rules or a Sphinx extension
    for redirects. Every page address now starts with the directory, so links from other sites
    to the old addresses break without a redirect.

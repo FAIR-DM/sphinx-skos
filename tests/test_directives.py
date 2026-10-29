@@ -1,11 +1,10 @@
+import shutil
+from collections.abc import Callable
 from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 from docutils import nodes
-import shutil
-from collections.abc import Callable
-
 from rdflib import RDF, BNode, Graph, Literal, Namespace, URIRef
 from sphinx.testing.util import SphinxTestApp
 
@@ -946,6 +945,18 @@ class TestDownloads:
             assert rdf_links(Path(app.outdir) / name / "index.html") == []
         assert len(rdf_links(built_page(app, "rel/hub"))) == len(RDF_SUFFIXES)
 
+    def test_a_single_page_build_offers_no_download_links(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("singlehtml", srcdir=site)
+        app.build()
+
+        assert rdf_links(Path(app.outdir) / "index.html") == []
+
     def test_html_then_dirhtml_over_one_doctree_directory_resolves_every_link(
         self,
         make_app: Callable[..., SphinxTestApp],
@@ -998,7 +1009,10 @@ class TestDownloads:
                 for address in ("date-types", "date-types/available")
             ]
 
-        assert [html - text for html, text in zip(shown["dirhtml"], shown["text"])] == [
+        assert [
+            html - text
+            for html, text in zip(shown["dirhtml"], shown["text"], strict=True)
+        ] == [
             1,
             1,
         ]
