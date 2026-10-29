@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [v0.5.1] - 2026-10-29
+
 ### Added
 
 - A site built with Furo links its repository from the footer of every page with a GitHub icon.
