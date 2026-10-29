@@ -354,14 +354,15 @@ class ResourceDirective(SphinxDirective):
         Args:
             name: The field's name, already translated, or the nodes of a link.
             *values: The nodes of each paragraph. A value that is a field list
-                is placed as it is, not in a paragraph.
+                or a bullet list is placed as it is, not in a paragraph.
 
         Returns:
             The field.
         """
         body = [
             value[0]
-            if len(value) == 1 and isinstance(value[0], nodes.field_list)
+            if len(value) == 1
+            and isinstance(value[0], nodes.field_list | nodes.bullet_list)
             else nodes.paragraph("", "", *value)
             for value in values
         ]
@@ -430,7 +431,36 @@ class VocabularyDirective(ResourceDirective):
                 translate("Collections"),
                 self.links(vocabularies.collections_in(uri, language)),
             ),
+            (translate("Namespace prefixes"), self.prefix_list(uri)),
         ]
+
+    def prefix_list(self, uri: str) -> list[list[nodes.Node]]:
+        """Return a bullet list of the namespace prefixes the vocabulary declares.
+
+        Args:
+            uri: The vocabulary's URI.
+
+        Returns:
+            The list as the one value of a field, or nothing when the files of
+            the vocabulary declare no prefix. Each item is the prefix and a
+            colon, then a link to the namespace.
+        """
+        prefixes = self.vocabularies.declared_prefixes(uri, self.config.language)
+        if not prefixes:
+            return []
+        items = [
+            nodes.list_item(
+                "",
+                nodes.paragraph(
+                    "",
+                    "",
+                    nodes.Text(f"{prefix}: "),
+                    self.uri_reference(str(namespace), str(namespace)),
+                ),
+            )
+            for prefix, namespace in prefixes
+        ]
+        return [[nodes.bullet_list("", *items)]]
 
 
 class ConceptDirective(ResourceDirective):

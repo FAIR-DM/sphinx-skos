@@ -1011,3 +1011,80 @@ class TestDownloads:
         names = [name.astext() for name in document.findall(nodes.field_name)]
         assert "Herunterladen" in names
         assert "Download" not in names
+
+
+def prefix_items(app: SphinxTestApp, docname: str) -> list[tuple[str, str]]:
+    """Return each (prefix text, namespace link) of the bullet lists on a page."""
+    document = app.env.get_doctree(docname)
+    return [
+        (
+            item.children[0].children[0].astext().strip(),
+            next(item.findall(nodes.reference))["refuri"],
+        )
+        for bullets in document.findall(nodes.bullet_list)
+        for item in bullets.findall(nodes.list_item)
+    ]
+
+
+class TestNamespacePrefixes:
+    @pytest.mark.sphinx("dirhtml", testroot="clashing-prefixes")
+    def test_a_vocabulary_page_lists_each_declared_prefix_with_its_namespace_link(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert prefix_items(app, page("shared")) == [
+            (":", BASE),
+            ("ex:", "https://example.org/ns/one/"),
+            ("ex:", "https://example.org/ns/two/"),
+            ("skos:", str(SKOS)),
+        ]
+        html = page_html(app, page("shared"))
+        assert 'href="https://example.org/ns/two/"' in html
+
+    @pytest.mark.sphinx("dirhtml", testroot="clashing-prefixes")
+    def test_a_prefix_no_file_of_the_vocabulary_declares_is_not_listed(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        listed = {text for text, _ in prefix_items(app, page("shared"))}
+        assert "owl:" not in listed
+        assert "xsd:" not in listed
+        assert prefix_items(app, page("apart")) == [
+            ("owl:", "http://www.w3.org/2002/07/owl#"),
+            ("skos:", str(SKOS)),
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="clashing-prefixes")
+    def test_a_concept_page_lists_no_prefixes(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert prefix_items(app, page("shared/thing")) == []
+
+    def test_the_list_is_in_the_same_order_on_every_build(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        listed = []
+        for build in ("first", "second"):
+            srcdir = tmp_path / build
+            shutil.copytree(rootdir / "test-clashing-prefixes", srcdir)
+            app = make_app("dirhtml", srcdir=srcdir)
+            app.build()
+            listed.append(prefix_items(app, page("shared")))
+
+        assert listed[0] == listed[1]
+        assert len(listed[0]) == 4
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_a_vocabulary_written_by_hand_lists_its_prefixes(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        by_hand = prefix_items(app, "guide")
+        assert by_hand
+        assert by_hand == prefix_items(app, page("rel"))

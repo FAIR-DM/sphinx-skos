@@ -148,7 +148,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
   one field for each other property, named by a link to it. `values(values, seen)` gives the
   paragraphs for the objects of a property, `literal_value(literal)` a literal's text and tag,
   and `label_values(labels)` the paragraphs for labels with their languages.
-  `field(name, *values)` builds one field, named by text or by a link. `link(uri)` shows a URI
+  `field(name, *values)` builds one field, named by text or by a link; a list value is placed as it is. `link(uri)` shows a URI
   as a cross-reference to its page, as a link to itself by its `name` when it has no page, or as
   plain text when its scheme is `javascript`, `data` or `vbscript`; `uri_reference(uri, text)`
   makes that last choice. `links(uris)` does so for each URI and `target_links(targets)` for each
@@ -160,7 +160,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. Each shows every
   statement its resource carries except hidden labels, as the [directives
   reference](directives.md#what-is-shown) sets out. A vocabulary adds links to its concepts and
-  collections, a collection links to its members, and a concept links to its vocabulary,
+  collections and, from `prefix_list(uri)`, a bullet list of the namespace prefixes its files declare, a collection links to its members, and a concept links to its vocabulary,
   collections, broader, narrower and related concepts, with one field for each mapping property
   it uses. The names of the labelled fields are translated through the `sphinx_skos` message
   catalogue.
