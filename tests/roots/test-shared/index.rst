@@ -3,4 +3,4 @@ Shared
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

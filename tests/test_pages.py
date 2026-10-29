@@ -25,8 +25,8 @@ ADDRESSES = {
     "methods/survey",
     "methods/loose",
 }
-DOCNAMES = {f"vocabularies/{address}" for address in ADDRESSES}
-INDEX = "vocabularies/index"
+DOCNAMES = {f"catalogue/{address}" for address in ADDRESSES}
+INDEX = "catalogue/index"
 UNUSABLE = [
     BASE,
     BASE + "date-types#fragment",
@@ -79,20 +79,20 @@ class TestGeneratedPages:
     ) -> None:
         app.build()
 
-        assert "vocabularies/organisations/acme" not in app.env.found_docs
-        assert "vocabularies/references/smith-2020" not in app.env.found_docs
+        assert "catalogue/organisations/acme" not in app.env.found_docs
+        assert "catalogue/references/smith-2020" not in app.env.found_docs
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_a_page_is_titled_with_its_resource(self, app: SphinxTestApp) -> None:
         app.build()
 
         assert (
-            app.env.titles["vocabularies/date-types/available"].astext() == "Available"
+            app.env.titles["catalogue/date-types/available"].astext() == "Available"
         )
         assert (
-            app.env.titles["vocabularies/date-types/markup"].astext() == "<b>&amp;</b>"
+            app.env.titles["catalogue/date-types/markup"].astext() == "<b>&amp;</b>"
         )
-        assert app.env.titles["vocabularies/date-types"].astext() == "Date types"
+        assert app.env.titles["catalogue/date-types"].astext() == "Date types"
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_the_sites_own_pages_are_unchanged_by_the_build(
@@ -130,7 +130,7 @@ class TestGeneratedDirectory:
         generated = generated_sources(srcdir)
         assert generated
         for path in generated:
-            assert path.relative_to(srcdir).parts[0] == "vocabularies"
+            assert path.relative_to(srcdir).parts[0] == "catalogue"
 
     @pytest.mark.sphinx(
         "dirhtml", testroot="vocabularies", confoverrides={"skos_directory": "terms"}
@@ -213,7 +213,7 @@ class TestIndexPage:
     ) -> None:
         app.build()
 
-        assert "vocabularies/rel/loose" in app.env.toctree_includes[INDEX]
+        assert "catalogue/rel/loose" in app.env.toctree_includes[INDEX]
         assert app.warning.getvalue() == ""
 
     def test_a_resource_at_the_address_index_is_a_collision_and_the_index_is_kept(
@@ -232,7 +232,7 @@ class TestIndexPage:
         app.build()
 
         assert len(warnings_naming(app, BASE + "index")) == 1
-        source = (site / "vocabularies" / "index.rst").read_text(encoding="utf-8")
+        source = (site / "catalogue" / "index.rst").read_text(encoding="utf-8")
         assert source.startswith(MARKER)
         assert "skos:concept" not in source
 
@@ -302,7 +302,7 @@ class TestVocabularyNavigation:
             )
         ]
         assert len(expected) == 6
-        assert app.env.toctree_includes["vocabularies/date-types"] == expected
+        assert app.env.toctree_includes["catalogue/date-types"] == expected
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_every_concept_and_collection_is_below_its_vocabulary(
@@ -322,7 +322,7 @@ class TestVocabularyNavigation:
                 *domain.vocabularies.collections_in(vocabulary, language),
             ]
             assert {domain.pages.docname_for(uri) for uri in members} <= below
-        assert "vocabularies/date-types/in-order" in descendants(app, INDEX)
+        assert "catalogue/date-types/in-order" in descendants(app, INDEX)
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_the_navigation_nests_each_member_inside_its_vocabulary_entry(
@@ -334,7 +334,7 @@ class TestVocabularyNavigation:
         vocabulary = BASE + "date-types"
         navigation = global_toctree_for_doc(
             app.env,
-            "vocabularies/date-types/available",
+            "catalogue/date-types/available",
             app.builder,
             tags=app.builder.tags,
             collapse=False,
@@ -343,7 +343,7 @@ class TestVocabularyNavigation:
         )
         assert navigation is not None
         page = app.builder.get_relative_uri(
-            "vocabularies/date-types/available", "vocabularies/date-types"
+            "catalogue/date-types/available", "catalogue/date-types"
         )
         entry = next(
             item
@@ -362,7 +362,7 @@ class TestVocabularyNavigation:
         ]
         for uri in members:
             target = app.builder.get_relative_uri(
-                "vocabularies/date-types/available", domain.pages.docname_for(uri)
+                "catalogue/date-types/available", domain.pages.docname_for(uri)
             )
             assert target in nested
 
@@ -374,7 +374,7 @@ class TestVocabularyNavigation:
 
         domain = app.env.domains["skos"]
         language = app.config.language
-        source = "vocabularies/date-types/available"
+        source = "catalogue/date-types/available"
         own = [
             uri
             for uri in domain.vocabularies.concepts_in(BASE + "date-types", language)
@@ -412,7 +412,7 @@ class TestVocabularyNavigation:
         app.build()
 
         doctree = app.env.get_and_resolve_doctree(
-            "vocabularies/date-types", app.builder, tags=app.builder.tags
+            "catalogue/date-types", app.builder, tags=app.builder.tags
         )
         assert not list(doctree.findall(addnodes.toctree))
         assert not [
@@ -429,10 +429,10 @@ class TestVocabularyNavigation:
 
         listed = set(app.env.toctree_includes[INDEX])
         assert listed == {
-            "vocabularies/date-types",
-            "vocabularies/methods",
-            "vocabularies/instruments",
-            "vocabularies/methods/loose",
+            "catalogue/date-types",
+            "catalogue/methods",
+            "catalogue/instruments",
+            "catalogue/methods/loose",
         }
 
     @pytest.mark.sphinx("dirhtml", testroot="shared")
@@ -441,12 +441,12 @@ class TestVocabularyNavigation:
     ) -> None:
         app.build()
 
-        both = "vocabularies/common/both"
-        assert both in app.env.toctree_includes["vocabularies/north"]
-        assert both in app.env.toctree_includes["vocabularies/south"]
+        both = "catalogue/common/both"
+        assert both in app.env.toctree_includes["catalogue/north"]
+        assert both in app.env.toctree_includes["catalogue/south"]
         assert (
-            "vocabularies/common/north-only"
-            not in (app.env.toctree_includes["vocabularies/south"])
+            "catalogue/common/north-only"
+            not in (app.env.toctree_includes["catalogue/south"])
         )
         assert sum(docname == both for docname in app.env.found_docs) == 1
         assert app.warning.getvalue() == ""
@@ -532,7 +532,7 @@ class TestUpgrade:
         assert (site / "thing" / "kept.rst").is_file()
         assert (site / "notes.rst").is_file()
         assert {"thing", "thing/child"}.isdisjoint(app.env.found_docs)
-        assert {"vocabularies/thing", "vocabularies/thing/child"} <= (
+        assert {"catalogue/thing", "catalogue/thing/child"} <= (
             app.env.found_docs
         )
 
@@ -578,11 +578,11 @@ class TestCollisions:
     def test_the_sites_own_document_is_kept(self, app: SphinxTestApp) -> None:
         app.build()
 
-        own = (Path(app.srcdir) / "vocabularies" / "own.rst").read_text(
+        own = (Path(app.srcdir) / "catalogue" / "own.rst").read_text(
             encoding="utf-8"
         )
         assert own.startswith(":orphan:")
-        output = (Path(app.outdir) / "vocabularies" / "own" / "index.html").read_text(
+        output = (Path(app.outdir) / "catalogue" / "own" / "index.html").read_text(
             encoding="utf-8"
         )
         assert "Own page of the site" in output
@@ -604,7 +604,7 @@ class TestCollisions:
 
         lines = warnings_naming(app, BASE + "a/")
         assert len(lines) == 1
-        assert "vocabularies/a/index" not in app.env.found_docs
+        assert "catalogue/a/index" not in app.env.found_docs
 
     @pytest.mark.sphinx("dirhtml", testroot="collision")
     def test_the_second_of_two_resources_at_one_address_is_named(
@@ -614,8 +614,8 @@ class TestCollisions:
 
         lines = warnings_naming(app, BASE + "x/")
         assert len(lines) == 1
-        assert "vocabularies/x" in app.env.found_docs
-        assert "vocabularies/x/index" not in app.env.found_docs
+        assert "catalogue/x" in app.env.found_docs
+        assert "catalogue/x/index" not in app.env.found_docs
 
     @pytest.mark.sphinx("dirhtml", testroot="collision")
     def test_a_resource_with_no_collision_still_has_its_page(
@@ -623,7 +623,7 @@ class TestCollisions:
     ) -> None:
         app.build()
 
-        assert "vocabularies/fine" in app.env.found_docs
+        assert "catalogue/fine" in app.env.found_docs
 
 
 class TestHiddenSiteDocuments:
@@ -633,11 +633,11 @@ class TestHiddenSiteDocuments:
     ) -> None:
         app.build()
 
-        original = rootdir / "test-hidden" / "vocabularies" / "hidden.rst"
-        written = Path(app.srcdir) / "vocabularies" / "hidden.rst"
+        original = rootdir / "test-hidden" / "catalogue" / "hidden.rst"
+        written = Path(app.srcdir) / "catalogue" / "hidden.rst"
         assert written.read_bytes() == original.read_bytes()
         assert len(warnings_naming(app, BASE + "hidden")) == 1
-        assert "vocabularies/shown" in app.env.found_docs
+        assert "catalogue/shown" in app.env.found_docs
 
 
 class TestSiteSourceEncoding:
@@ -656,7 +656,7 @@ class TestSiteSourceEncoding:
         )
         app.build()
 
-        assert {"latin", "vocabularies/date-types"} <= app.env.found_docs
+        assert {"latin", "catalogue/date-types"} <= app.env.found_docs
 
 
 class TestSourceSuffix:
@@ -666,9 +666,9 @@ class TestSourceSuffix:
     ) -> None:
         app.build()
 
-        assert {"vocabularies/one", "vocabularies/one/first"} <= app.env.found_docs
+        assert {"catalogue/one", "catalogue/one/first"} <= app.env.found_docs
         assert (
-            Path(app.outdir) / "vocabularies" / "one" / "first" / "index.html"
+            Path(app.outdir) / "catalogue" / "one" / "first" / "index.html"
         ).is_file()
         assert not list(Path(app.srcdir).rglob("*.rst"))
 
@@ -724,7 +724,7 @@ class TestControlCharacters:
     ) -> None:
         app.build()
 
-        assert app.env.found_docs - {"index", INDEX} == {"vocabularies/plain"}
+        assert app.env.found_docs - {"index", INDEX} == {"catalogue/plain"}
         assert [path.name for path in generated_sources(Path(app.srcdir))] == [
             "index.rst",
             "plain.rst",
@@ -809,9 +809,9 @@ class TestFrontPage:
         original = rootdir / "test-suffix" / "index.txt"
         assert (Path(app.srcdir) / "index.txt").read_bytes() == original.read_bytes()
         assert generated_sources(Path(app.srcdir)) == [
-            Path(app.srcdir) / "vocabularies" / "index.txt",
-            Path(app.srcdir) / "vocabularies" / "one" / "first.txt",
-            Path(app.srcdir) / "vocabularies" / "one.txt",
+            Path(app.srcdir) / "catalogue" / "index.txt",
+            Path(app.srcdir) / "catalogue" / "one" / "first.txt",
+            Path(app.srcdir) / "catalogue" / "one.txt",
         ]
         assert app.warning.getvalue() == ""
 
@@ -821,7 +821,7 @@ class TestFrontPage:
         site = tmp_path / "site"
         shutil.copytree(rootdir / "test-no-front-page", site)
         (site / "index.md").write_text(
-            "Mine\n====\n\n.. toctree::\n\n   vocabularies/index\n   guide\n   more/deep\n",
+            "Mine\n====\n\n.. toctree::\n\n   catalogue/index\n   guide\n   more/deep\n",
             encoding="utf-8",
         )
 
@@ -841,7 +841,7 @@ class TestFrontPage:
         shutil.copytree(rootdir / "test-no-front-page", site)
         (site / "index.rst").write_text(f"{MARKER}\n\nFront\n=====\n", encoding="utf-8")
         (site / "index.md").write_text(
-            "Mine\n====\n\n.. toctree::\n\n   vocabularies/index\n   guide\n   more/deep\n",
+            "Mine\n====\n\n.. toctree::\n\n   catalogue/index\n   guide\n   more/deep\n",
             encoding="utf-8",
         )
 

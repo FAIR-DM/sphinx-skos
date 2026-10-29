@@ -110,26 +110,26 @@ every resource in the file.
 ### User Story 2 - A developer adds the vocabulary pages to their own Sphinx site (Priority: P1)
 
 A developer who already runs a Sphinx site lists their vocabulary files in `conf.py`, as today.
-Every generated page is written into one directory of the site's source, `vocabularies/` unless
+Every generated page is written into one directory of the site's source, `catalogue/` unless
 they name it otherwise, with an index page listing every vocabulary. They add that index to one of
 their own tables of contents, and ignore the directory with one `.gitignore` entry.
 
 **Why this priority**: It is how an existing site gets navigation, and the one-command build in
 US1 is built on the same directory.
 
-**Independent Test**: Build a test site whose root table of contents lists `vocabularies/index`,
-and check that every generated page sits under `vocabularies/`, that the build emits no warning,
-and that the source directory outside `vocabularies/` gained no generated file.
+**Independent Test**: Build a test site whose root table of contents lists `catalogue/index`,
+and check that every generated page sits under `catalogue/`, that the build emits no warning,
+and that the source directory outside `catalogue/` gained no generated file.
 
 **Acceptance Scenarios**:
 
 1. **Given** a site with the default settings, **When** it is built, **Then** every generated page
-   is under `vocabularies/` in the source directory, and no generated file is anywhere else in it.
+   is under `catalogue/` in the source directory, and no generated file is anywhere else in it.
 2. **Given** a site that sets the generated-pages directory to another name, **When** it is built,
    **Then** every generated page is under that directory instead.
 3. **Given** the base URI `https://w3id.org/example/vocabularies/` and a concept
    `https://w3id.org/example/vocabularies/date-types/available`, **When** the site is built with
-   the default directory, **Then** the concept's page is `vocabularies/date-types/available/` in
+   the default directory, **Then** the concept's page is `catalogue/date-types/available/` in
    the output.
 4. **Given** the generated-pages directory, **When** the site is built, **Then** it holds an
    index page that links to every vocabulary.
@@ -279,7 +279,7 @@ lists that file's prefixes.
 **Generated-pages directory**
 
 - **FR-013**: Every generated page MUST be written under one directory of the site's source
-  directory, `vocabularies` by default, named by a setting. Nothing generated MUST be written
+  directory, `catalogue` by default, named by a setting. Nothing generated MUST be written
   anywhere else in the source directory. *(US2)*
 - **FR-014**: A resource's page address MUST be its URI with the base URI removed, under the
   generated-pages directory, and depend on nothing else. *(US2)*
@@ -332,7 +332,7 @@ lists that file's prefixes.
 ### Key Entities
 
 - **Generated-pages directory**: the directory in the site's source that holds every generated
-  page and the index, `vocabularies/` by default.
+  page and the index, `catalogue/` by default.
 - **Index**: the page at the root of the generated-pages directory that lists every vocabulary;
   the one document a site adds to its own table of contents.
 - **Front page**: the site's root page. The site's own, when it has one; otherwise the one the

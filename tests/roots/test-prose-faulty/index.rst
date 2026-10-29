@@ -6,4 +6,4 @@ Faulty
    unknown
    missing
    wrongkind
-   vocabularies/index
+   catalogue/index

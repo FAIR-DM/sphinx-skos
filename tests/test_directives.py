@@ -34,7 +34,7 @@ def has_tag(paragraph: list[str], text: str, tag: str) -> bool:
 
 def page(address: str) -> str:
     """Return the document name of the generated page at ``address``."""
-    return f"vocabularies/{address}"
+    return f"catalogue/{address}"
 
 
 def page_html(app: SphinxTestApp, address: str) -> str:
@@ -419,10 +419,10 @@ class TestConceptLinks:
         hub = BASE + "rel/hub"
         address = href(app, hub, BASE + "rel-other/mapped")
         target = (
-            Path(app.outdir) / "vocabularies" / "rel" / "hub" / address / "index.html"
+            Path(app.outdir) / "catalogue" / "rel" / "hub" / address / "index.html"
         )
         assert target.resolve() == (
-            Path(app.outdir) / "vocabularies" / "rel-other" / "mapped" / "index.html"
+            Path(app.outdir) / "catalogue" / "rel-other" / "mapped" / "index.html"
         )
         assert target.resolve().is_file()
 
@@ -1043,7 +1043,7 @@ class TestDownloads:
             assert (file.parent / link).resolve().is_file()
             assert (file.parent / link).resolve().parent == Path(
                 app.outdir
-            ) / "vocabularies"
+            ) / "catalogue"
 
     @pytest.mark.sphinx("dirhtml", testroot="prose")
     def test_a_page_written_by_hand_has_no_download_links(

@@ -3,4 +3,4 @@ Linked
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

@@ -70,7 +70,7 @@ A link from a concept to a concept in another vocabulary: `skos:exactMatch`, `sk
 `skos:broadMatch`, `skos:narrowMatch` or `skos:relatedMatch`. _Avoid_: crosswalk, alignment.
 
 **Generated-pages directory**
-The directory in a site's source that holds every generated page and the index: `vocabularies/`
+The directory in a site's source that holds every generated page and the index: `catalogue/`
 unless `skos_directory` says otherwise. _Avoid_: output directory (that is where the built site
 goes).
 

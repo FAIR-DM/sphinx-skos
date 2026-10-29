@@ -42,8 +42,8 @@ class TestBuildCommand:
         site = project / "_build" / "site"
         assert code == 0
         assert (site / "index.html").is_file()
-        assert (site / "vocabularies" / "scheme" / "index.html").is_file()
-        assert (site / "vocabularies" / "scheme" / "idea" / "index.html").is_file()
+        assert (site / "catalogue" / "scheme" / "index.html").is_file()
+        assert (site / "catalogue" / "scheme" / "idea" / "index.html").is_file()
 
     def test_the_output_option_names_the_directory_of_the_site(
         self, project: Path
@@ -91,7 +91,7 @@ class TestBuildCommand:
         code = main(["build"])
 
         assert code == 0
-        assert not (project / "_build" / "site" / "vocabularies" / "scheme").exists()
+        assert not (project / "_build" / "site" / "catalogue" / "scheme").exists()
 
     def test_an_unreadable_file_fails_the_build_only_with_the_warning_option(
         self, project: Path

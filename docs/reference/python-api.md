@@ -146,7 +146,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
   gives the source of the front page, at `front_docname`, which exists only when the site has no
   document at `root_doc`: the `project` as title and a list of the index and then every document of
   the site's own. `toctree_of(entries, option)` gives a `toctree` directive listing entries, such
-  as `/vocabularies/index` or `Home <self>`.
+  as `/catalogue/index` or `Home <self>`.
   `write(srcdir)` writes the page sources, the index and the front page, each through `write_source(srcdir, docname, text, subject)`, which leaves a file of the site's own alone. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
   their output file, RDF copies, whole-vocabulary files (under `dirhtml`) and copied source.

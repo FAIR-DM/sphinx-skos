@@ -16,7 +16,7 @@ a base URI and a list of vocabulary patterns, is the whole configuration:
 title = "Example vocabularies"
 base-uri = "https://example.org/vocab/"
 vocabularies = ["data/*.ttl"]
-directory = "vocabularies"
+directory = "catalogue"
 logo = "docs/_static/logo.svg"
 ```
 
@@ -130,16 +130,16 @@ from Sphinx: the page is not written over it and the warning names the address a
 ## skos_directory
 
 - **Type**: string
-- **Default**: `"vocabularies"`
+- **Default**: `"catalogue"`
 
 The directory, inside the site's source directory, that holds every page the extension generates.
 A resource's page is at this directory followed by its page address, so with the default the
 concept `https://example.org/vocab/a/b` and the base URI `https://example.org/vocab/` give the
-page `vocabularies/a/b/`. The directory also holds an index page, `index`, that links every
+page `catalogue/a/b/`. The directory also holds an index page, `index`, titled "Catalogue", that links every
 vocabulary and every concept and collection that has a page. List it in a `toctree`, as
 [Add vocabulary pages to a site](../how-to/add-vocabulary-pages-to-a-site.md) shows.
 
-The value is a relative path with `/` between its parts, such as `vocabularies` or
+The value is a relative path with `/` between its parts, such as `catalogue` or
 `reference/terms`. When it is empty, starts with `/`, or has an empty, `.` or `..` part, the build
 gives one warning that names `skos_directory` and generates no page.
 

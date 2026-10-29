@@ -3,4 +3,4 @@ Facts
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

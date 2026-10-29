@@ -225,7 +225,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     """
     app.add_config_value("skos_vocabularies", [], "env", types=[list])
     app.add_config_value("skos_base_uri", "", "env", types=[str])
-    app.add_config_value("skos_directory", "vocabularies", "env", types=[str])
+    app.add_config_value("skos_directory", "catalogue", "env", types=[str])
     app.add_domain(SKOSDomain)
     app.add_post_transform(DownloadLinks)
     app.connect("config-inited", SiteSettings.apply, priority=400)
