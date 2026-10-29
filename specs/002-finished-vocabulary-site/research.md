@@ -71,8 +71,8 @@ The handler runs on `config-inited`, before any builder reads `html_theme`.
 ## R5. Settings from `pyproject.toml`
 
 `tomllib` is in the standard library from Python 3.11. The extension looks for `pyproject.toml`
-in the configuration directory and its parents, nearest first, and stops at the first one with a
-`[tool.sphinx-skos]` table. Keys map to settings: `title` to `project`, `base-uri` to
+in the configuration directory and its parents, nearest first, and stops at the first one it
+finds, table or not, so a project never takes settings from an unrelated ancestor. Keys map to settings: `title` to `project`, `base-uri` to
 `skos_base_uri`, `vocabularies` to `skos_vocabularies` and `directory` to `skos_directory`. A
 relative vocabulary pattern from the table is made absolute against the table's directory, so it
 is read from there (FR-002) while one from `conf.py` is still read from the configuration
@@ -84,8 +84,9 @@ directory. An unknown key gives a warning naming it.
 
 - **No `docs/conf.py`**: `-C` (no configuration file) and `-D extensions=sphinx_skos`. With `-C`,
   Sphinx's configuration directory is the source directory.
-- **`docs/conf.py`**: its `extensions` are read with `sphinx.config.Config.read`, and passed back
-  with `sphinx_skos` added as `-D extensions=...`, so a `conf.py` need not list the extension.
+- **`docs/conf.py`**: used as it is. It lists `sphinx_skos` in its own `extensions`, like any
+  Sphinx site. (`-D extensions=` would replace its list outright, so adding the extension for it
+  would mean running `conf.py` twice.)
 - **Source directory**: `docs/` when it exists, else `_build/source/`, created empty.
 - **Output**: `_build/site/` by default, `-o/--output` to change it; doctrees in
   `_build/doctrees/`. All relative to the directory holding `pyproject.toml`.
@@ -95,8 +96,9 @@ directory. An unknown key gives a warning naming it.
 ## R7. Whole-vocabulary files
 
 `Vocabularies.load` parses each file into its own `Graph` and discards it after merging. The plan
-keeps each file's graph, parsed with `bind_namespaces="none"` so that `namespaces()` is exactly
-what the file declares (`Graph()` binds rdflib's thirty defaults; checked).
+keeps each file's graph as well, parsed with `bind_namespaces="none"` so that `namespaces()` is
+exactly what the file declares (`Graph()` binds rdflib's thirty defaults; checked). The merged
+graph keeps the defaults: the pages shorten property names with them.
 
 A vocabulary is *stated in* a file when the file has a statement whose subject is the scheme or
 one of the vocabulary's concepts or collections (`concepts_in`, `collections_in`). Its
@@ -124,8 +126,9 @@ builder a vocabulary page's downloads are its own copies.
 
 Written by the extension, for any site, when the site has no root document of its own
 (`root_doc`, any suffix) and lists vocabularies: a marked file holding the site's `project` as its
-title and a toctree of the index and, with `:glob:`, `*`, which matches the site's own top-level
-pages and never documents in subdirectories. A site that adds a front page of its own gets the
+title and a toctree of the index and every document of the site's own, listed by name. A glob
+would warn when it matches nothing, as it does in a site with no `docs/`, and `*` never matches a
+document in a subdirectory. A site that adds a front page of its own gets the
 generated one deleted by `clean`, as a marked file the build no longer produces.
 
 ## R10. Theme default and dependencies

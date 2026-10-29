@@ -48,8 +48,9 @@ Connected to `config-inited` at priority 400 (before Sphinx's own handlers read 
 - `set_by_site(config, name)`: whether `conf.py` or `-D` set `name`, from `config.overrides` and
   `config._raw_config`. The one place that reads the private attribute, with the reason in its
   docstring (research R4).
-- `find_table(confdir)`: the nearest `pyproject.toml` from `confdir` upward that has
-  `[tool.sphinx-skos]`; returns the table and its directory, or `None`.
+- `find_table(confdir)`: the nearest `pyproject.toml` from `confdir` upward; returns its
+  `[tool.sphinx-skos]` table and its directory, or `None` when that file has no table. The search
+  never passes a `pyproject.toml`, so an unrelated ancestor's table is never read (DR-011).
 - `apply(app, config)`: for each key of the table (`title`, `base-uri`, `vocabularies`,
   `directory`), set the mapped setting unless `set_by_site`; relative `vocabularies` patterns made
   absolute against the table's directory; an unknown key warns naming it. Then, unless
@@ -73,8 +74,11 @@ Connected to `config-inited` at priority 400 (before Sphinx's own handlers read 
 - New `index_text()`: the marker, the title `Vocabularies` (translated) and a `:maxdepth: 1`
   toctree of every vocabulary with a page, sorted by title, then a hidden toctree of every concept
   and collection with a page that no vocabulary lists.
-- New `front_page_text(project)`: the marker, `project` as title, and a toctree of
-  `<directory>/index` and, under `:glob:`, `*`.
+- New `front_page_text(project, site_documents)`: the marker, `project` as title, and a toctree
+  listing `<directory>/index` and then every document of the site's own (from
+  `find_site_documents`, the root excluded), sorted, by name. No `:glob:`: an empty glob warns,
+  and `*` never reaches a subdirectory (design review DR-001). A page also listed in one of the
+  site's own toctrees only logs at info.
 - `write()` writes the index, and the front page when it is due, through the same
   write-when-changed and never-over-the-site's-own path as every page.
 - `clean()` is unchanged; it already removes every marked file the build no longer produces,
@@ -86,10 +90,11 @@ document is found by checking `root_doc` against it.
 
 ### RDF copies and downloads (`sphinx_skos/copies.py`, `sphinx_skos/vocabularies.py`, `sphinx_skos/directives.py`)
 
-- `Vocabularies.load` parses with `Graph(bind_namespaces="none")` and keeps the per-file graph in
-  `self.files: dict[Path, Graph]`, in file order. `own_prefixes` is then exactly what the file
-  declares, which also drops rdflib's default prefixes from the Turtle copies; the copies'
-  prefixes test is checked against that.
+- `Vocabularies.load` also keeps each file's own graph in `self.files: dict[Path, Graph]`, in
+  file order, parsed a second way with `Graph(bind_namespaces="none")` so that its `namespaces()`
+  are exactly what the file declares. `self.graph`, `own_rdf` and `curie` are unchanged: the merged
+  graph keeps rdflib's default prefixes, which shorten names on the pages today, and rdflib's
+  Turtle serialiser writes only the prefixes a copy uses (DR-004).
 - `Vocabularies.vocabulary_files(uri, language)`: the files with a statement whose subject is the
   scheme or one of its concepts or collections.
 - `Vocabularies.vocabulary_graph(uri, language)`: the union of those files' graphs, with every
@@ -101,10 +106,13 @@ document is found by checking `root_doc` against it.
   `write_copies` in `__init__.py` calls it for a vocabulary's generated page when the builder is
   `dirhtml` (research R7). `GeneratedPages.remove_output` also removes a gone vocabulary's whole
   files.
-- `ResourceDirective` gains a `Download` field, last, on the resource's generated page under an
-  HTML builder only: four references labelled `Turtle`, `JSON-LD`, `RDF/XML`, `N-Triples`. Their
-  targets are the copy file names from `RdfCopies.paths(builder.get_outfilename(docname))`, or for
-  a vocabulary under `dirhtml` the whole files, relative to the page.
+- `ResourceDirective` gains a `Download` field, last, on the resource's generated page: four
+  references labelled `Turtle`, `JSON-LD`, `RDF/XML`, `N-Triples`, with no target, each carrying
+  its format's suffix. Doctrees are pickled and reused when the builder changes, so nothing
+  builder-specific is decided at read time (DR-002). A `DownloadLinks` post-transform
+  (`SphinxPostTransform`, run per builder as the doctree is resolved for writing) sets each target
+  from `app.builder.get_outfilename` relative to the page, chooses the whole files for a
+  vocabulary under `dirhtml`, and removes the field for a builder that does not write HTML.
 - `VocabularyDirective` gains a `Namespace prefixes` field, by hand and generated alike, when the
   vocabulary's files declare any: a bullet list, each item `prefix:` then the namespace URI as a
   link. Empty prefix shown as `:`.
@@ -115,8 +123,10 @@ document is found by checking `root_doc` against it.
 [-o OUTPUT] [-W]` with `argparse` and returns `SiteBuild(root=Path.cwd(), ...).run()`.
 
 - `run()`: if `pyproject.toml` has no `[tool.sphinx-skos]` table and `docs/conf.py` does not
-  exist, print a message naming both and return 2. Otherwise build with `build_main` as research
-  R6 sets out, and return its exit code.
+  exist, print a message naming both and return 2. Without `docs/conf.py`, build with `-C -D
+  extensions=sphinx_skos`. With one, build with it as it is: it lists `sphinx_skos` in its own
+  `extensions`, as any Sphinx site does, and is read once (DR-008). Return `build_main`'s exit
+  code.
 - Source directory: `docs/` if it exists, else `_build/source/` (created). Output default
   `_build/site/`, doctrees `_build/doctrees/`, all under `root`.
 
