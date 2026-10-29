@@ -1,2 +1,6 @@
 Outside
 =======
+
+.. toctree::
+
+   vocabularies/index

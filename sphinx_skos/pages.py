@@ -8,6 +8,7 @@ from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.util import logging
 
 from sphinx_skos.copies import RdfCopies
+from sphinx_skos.directives import translate
 from sphinx_skos.vocabularies import Kind, Vocabularies
 
 logger = logging.getLogger(__name__)
@@ -26,16 +27,19 @@ class GeneratedPages:
         vocabularies: The site's vocabulary files.
         base_uri: The ``skos_base_uri`` setting.
         directory: The ``skos_directory`` setting.
+        language: The site's ``language`` setting.
         source_suffix: The site's ``source_suffix`` setting.
         site_documents: The names of the documents the site wrote itself.
 
     Attributes:
+        index_docname: The generated index of the vocabularies, if there is one.
         docnames: The generated document of each resource, by URI.
         uris: The resource of each generated document, by document name.
         suffix: The file suffix of the generated sources, if the site has a
             reStructuredText one.
     """
 
+    index_docname: str | None
     docnames: dict[str, str]
     uris: dict[str, str]
     suffix: str | None
@@ -45,10 +49,13 @@ class GeneratedPages:
         vocabularies: Vocabularies,
         base_uri: str,
         directory: str,
+        language: str,
         source_suffix: Mapping[str, str],
         site_documents: Collection[str],
     ) -> None:
         self.vocabularies = vocabularies
+        self.language = language
+        self.index_docname = None
         self.docnames = {}
         self.uris = {}
         self.suffix = self.find_suffix(source_suffix)
@@ -60,6 +67,12 @@ class GeneratedPages:
         if not self.has_base_uri(base_uri) or not self.has_directory(directory):
             return
         taken = {self.compare_key(docname) for docname in site_documents}
+        index = f"{directory}/index"
+        if self.compare_key(index) in taken:
+            logger.warning("The index %s is already used by a document", index)
+        else:
+            taken.add(self.compare_key(index))
+            self.index_docname = index
         for uri in sorted(vocabularies.resources):
             docname = self.find_docname(uri, base_uri, directory)
             if docname is None:
@@ -203,9 +216,31 @@ class GeneratedPages:
             kind: The resource's kind.
 
         Returns:
-            The marker line, the orphan field and the resource's directive.
+            The marker line and the resource's directive.
         """
-        return f"{MARKER}\n\n:orphan:\n\n.. skos:{kind}:: {uri}\n"
+        return f"{MARKER}\n\n.. skos:{kind}:: {uri}\n"
+
+    def index_text(self) -> str:
+        """Return the source of the index page.
+
+        Returns:
+            The marker line, the translated title, a list of every vocabulary
+            with a page and a hidden list of every concept and collection with
+            a page.
+        """
+        title = translate("Vocabularies")
+        uris = self.vocabularies.sort_by_title(self.docnames, self.language)
+        kinds = self.vocabularies.resources
+        text = f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n"
+        for options, wanted in ((":maxdepth: 1", True), (":hidden:", False)):
+            entries = [
+                f"   /{self.docnames[uri]}\n"
+                for uri in uris
+                if (kinds[uri] == "vocabulary") is wanted
+            ]
+            if entries:
+                text += f"\n.. toctree::\n   {options}\n\n{''.join(entries)}"
+        return text
 
     def write(self, srcdir: str | Path) -> None:
         """Write the source of every page into the source directory.
@@ -218,21 +253,37 @@ class GeneratedPages:
             srcdir: The site's source directory.
         """
         for uri, docname in self.docnames.items():
-            path = Path(srcdir) / f"{docname}{self.suffix}"
             text = self.source_text(uri, self.vocabularies.resources[uri])
-            if path.exists():
-                if not self.is_generated(path):
-                    logger.warning(
-                        "Page address %s of %s is a file of the site's own: "
-                        "the page is not written",
-                        docname,
-                        uri,
-                    )
-                    continue
-                if path.read_text(encoding="utf-8") == text:
-                    continue
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text, encoding="utf-8")
+            self.write_source(srcdir, docname, text, f"of {uri}")
+        if self.index_docname is not None:
+            self.write_source(srcdir, self.index_docname, self.index_text(), "")
+
+    def write_source(
+        self, srcdir: str | Path, docname: str, text: str, subject: str
+    ) -> None:
+        """Write one generated source unless it is already there or not ours.
+
+        Args:
+            srcdir: The site's source directory.
+            docname: The document to write.
+            text: The source to write.
+            subject: What the warning names beside the document when the file
+                is the site's own.
+        """
+        path = Path(srcdir) / f"{docname}{self.suffix}"
+        if path.exists():
+            if not self.is_generated(path):
+                logger.warning(
+                    "Page address %s %s is a file of the site's own: "
+                    "the page is not written",
+                    docname,
+                    subject,
+                )
+                return
+            if path.read_text(encoding="utf-8") == text:
+                return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
 
     def clean(
         self,
@@ -256,7 +307,7 @@ class GeneratedPages:
             return
         source_root = Path(srcdir)
         skipped = [Path(directory).resolve() for directory in skip]
-        current = set(self.docnames.values())
+        current = set(self.docnames.values()) | {self.index_docname}
         for path in sorted(source_root.rglob(f"*{self.suffix}")):
             if any(path.resolve().is_relative_to(directory) for directory in skipped):
                 continue

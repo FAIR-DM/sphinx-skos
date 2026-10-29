@@ -1,2 +1,6 @@
 Properties
 ==========
+
+.. toctree::
+
+   vocabularies/index

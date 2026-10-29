@@ -56,6 +56,7 @@ def generate_pages(app: Sphinx) -> None:
         vocabularies,
         app.config.skos_base_uri,
         app.config.skos_directory,
+        app.config.language,
         app.config.source_suffix,
         find_site_documents(app),
     )

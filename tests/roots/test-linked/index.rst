@@ -1,2 +1,6 @@
 Linked
 ======
+
+.. toctree::
+
+   vocabularies/index
