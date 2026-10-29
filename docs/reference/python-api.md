@@ -33,6 +33,11 @@ warnings take part in Sphinx's warning handling, including `-W`.
   `<link rel="alternate">` element for each to the page's `metatags`. Under `dirhtml` a
   vocabulary's page also gets its whole-vocabulary files. Other pages are left alone.
 
+`release_shadowed_pages(app, config)`
+: Connected to Sphinx's `config-inited` event. Deletes each generated source beside a file of the
+  site's own for the same document with another suffix, so that Sphinx does not warn about two
+  files for one document.
+
 `find_site_documents(app)`
 : The names of the site's own documents: every document in the source directory whose file does
   not start with the generated-page marker line.
@@ -110,7 +115,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 ## Module `sphinx_skos.pages`
 
-`GeneratedPages(vocabularies, base_uri, directory, language, source_suffix, site_documents)`
+`GeneratedPages(vocabularies, base_uri, directory, language, source_suffix, site_documents, project, root_doc)`
 : The page of every resource that can have one, in the `skos_directory` directory.
   `has_directory(directory)` says whether a directory is usable and warns when it is not.
   `docname_for(uri)` gives a resource's document
@@ -118,9 +123,16 @@ warnings take part in Sphinx's warning handling, including `-W`.
   collections of a vocabulary that have a page, and `toctree_text(uris, option)` gives a
   `toctree` directive listing their pages; a vocabulary's source holds one, hidden.
   `index_text()` gives the source of the index page, at `index_docname`, that lists every
-  vocabulary and, hidden, the concepts and collections no vocabulary lists. `write(srcdir)` writes the page sources and the index, each through `write_source(srcdir, docname, text, subject)`, which leaves a file of the site's own alone. `clean(srcdir,
+  vocabulary and, hidden, the concepts and collections no vocabulary lists. `front_page_text()`
+  gives the source of the front page, at `front_docname`, which exists only when the site has no
+  document at `root_doc`: the `project` as title and a list of the index and then every document of
+  the site's own. `toctree_of(docnames, option)` gives a `toctree` directive listing documents.
+  `write(srcdir)` writes the page sources, the index and the front page, each through `write_source(srcdir, docname, text, subject)`, which leaves a file of the site's own alone. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
-  their output file, RDF copies, whole-vocabulary files (under `dirhtml`) and copied source. `uri_for(docname)` gives the resource a
+  their output file, RDF copies, whole-vocabulary files (under `dirhtml`) and copied source.
+  `find_generated(srcdir, suffixes, skip)` lists the generated sources in a source directory and
+  `release_shadowed(srcdir, suffixes, skip)` deletes those that a file of the site's own with
+  another suffix shadows. `uri_for(docname)` gives the resource a
   generated document is the page of, or `None`; its `uris` attribute holds them all.
 
 ## Module `sphinx_skos.copies`

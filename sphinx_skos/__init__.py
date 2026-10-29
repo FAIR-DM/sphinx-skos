@@ -6,6 +6,7 @@ from typing import Any, cast
 from sphinx.application import Sphinx
 from sphinx.builders import Builder
 from sphinx.builders.html import StandaloneHTMLBuilder
+from sphinx.config import Config
 from sphinx.environment import BuildEnvironment
 from sphinx.project import Project
 from sphinx.util.typing import ExtensionMetadata
@@ -45,6 +46,21 @@ def find_site_documents(app: Sphinx) -> set[str]:
     }
 
 
+def release_shadowed_pages(app: Sphinx, config: Config) -> None:
+    """Delete the generated sources that a document of the site's own shadows.
+
+    Sphinx reads the source directory before it announces the builder, and
+    warns when two files there are one document.
+
+    Args:
+        app: The Sphinx application building the site.
+        config: The site's configuration.
+    """
+    GeneratedPages.release_shadowed(
+        app.srcdir, config.source_suffix, [app.outdir, app.doctreedir]
+    )
+
+
 def generate_pages(app: Sphinx) -> None:
     """Load the vocabulary files and write the source of every page.
 
@@ -61,6 +77,8 @@ def generate_pages(app: Sphinx) -> None:
         app.config.language,
         app.config.source_suffix,
         find_site_documents(app),
+        app.config.project,
+        app.config.root_doc,
     )
     pages.write(app.srcdir)
     pages.clean(app.srcdir, app.builder, [app.outdir, app.doctreedir])
@@ -164,6 +182,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_domain(SKOSDomain)
     app.add_post_transform(DownloadLinks)
     app.connect("config-inited", SiteSettings.apply, priority=400)
+    app.connect("config-inited", release_shadowed_pages)
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)

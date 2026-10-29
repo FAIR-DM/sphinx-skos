@@ -6,6 +6,7 @@ from pathlib import Path
 from sphinx.builders import Builder
 from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.util import logging
+from sphinx.util.rst import escape
 
 from sphinx_skos.copies import RdfCopies
 from sphinx_skos.directives import translate
@@ -30,9 +31,13 @@ class GeneratedPages:
         language: The site's ``language`` setting.
         source_suffix: The site's ``source_suffix`` setting.
         site_documents: The names of the documents the site wrote itself.
+        project: The site's ``project`` setting.
+        root_doc: The site's ``root_doc`` setting.
 
     Attributes:
         index_docname: The generated index of the vocabularies, if there is one.
+        front_docname: The generated front page, if the site has no root document
+            of its own and pages are generated.
         docnames: The generated document of each resource, by URI.
         uris: The resource of each generated document, by document name.
         suffix: The file suffix of the generated sources, if the site has a
@@ -40,6 +45,7 @@ class GeneratedPages:
     """
 
     index_docname: str | None
+    front_docname: str | None
     docnames: dict[str, str]
     uris: dict[str, str]
     suffix: str | None
@@ -52,10 +58,15 @@ class GeneratedPages:
         language: str,
         source_suffix: Mapping[str, str],
         site_documents: Collection[str],
+        project: str,
+        root_doc: str,
     ) -> None:
         self.vocabularies = vocabularies
         self.language = language
+        self.project = project
+        self.site_documents = sorted(site_documents)
         self.index_docname = None
+        self.front_docname = None
         self.docnames = {}
         self.uris = {}
         self.suffix = self.find_suffix(source_suffix)
@@ -67,6 +78,9 @@ class GeneratedPages:
         if not self.has_base_uri(base_uri) or not self.has_directory(directory):
             return
         taken = {self.compare_key(docname) for docname in site_documents}
+        if self.compare_key(root_doc) not in taken:
+            taken.add(self.compare_key(root_doc))
+            self.front_docname = root_doc
         index = f"{directory}/index"
         if self.compare_key(index) in taken:
             logger.warning("The index %s is already used by a document", index)
@@ -251,7 +265,20 @@ class GeneratedPages:
         Returns:
             The directive, or an empty string if there is nothing to list.
         """
-        entries = "".join(f"   /{self.docnames[uri]}\n" for uri in uris)
+        return self.toctree_of([self.docnames[uri] for uri in uris], option)
+
+    @staticmethod
+    def toctree_of(docnames: Iterable[str], option: str) -> str:
+        """Return a ``toctree`` directive listing documents.
+
+        Args:
+            docnames: The documents to list, in order.
+            option: The directive option line, such as ``:maxdepth: 1``.
+
+        Returns:
+            The directive, or an empty string if there is nothing to list.
+        """
+        entries = "".join(f"   /{docname}\n" for docname in docnames)
         if not entries:
             return ""
         return f"\n.. toctree::\n   {option}\n\n{entries}"
@@ -280,6 +307,19 @@ class GeneratedPages:
             + self.toctree_text(unlisted, ":hidden:")
         )
 
+    def front_page_text(self) -> str:
+        """Return the source of the front page.
+
+        Returns:
+            The marker line, the site's ``project`` as the title and a list of
+            the index and then every document of the site's own, by name.
+        """
+        title = escape(self.project)
+        listed = [self.index_docname] if self.index_docname else []
+        return f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n" + self.toctree_of(
+            [*listed, *self.site_documents], ":maxdepth: 1"
+        )
+
     def write(self, srcdir: str | Path) -> None:
         """Write the source of every page into the source directory.
 
@@ -295,6 +335,8 @@ class GeneratedPages:
             self.write_source(srcdir, docname, text, f"of {uri}")
         if self.index_docname is not None:
             self.write_source(srcdir, self.index_docname, self.index_text(), "")
+        if self.front_docname is not None:
+            self.write_source(srcdir, self.front_docname, self.front_page_text(), "")
 
     def write_source(
         self, srcdir: str | Path, docname: str, text: str, subject: str
@@ -343,17 +385,70 @@ class GeneratedPages:
         """
         if self.suffix is None:
             return
-        source_root = Path(srcdir)
+        current = set(self.docnames.values()) | {
+            self.index_docname,
+            self.front_docname,
+        }
+        for path in self.find_generated(srcdir, [self.suffix], skip):
+            docname = path.relative_to(srcdir).as_posix().removesuffix(self.suffix)
+            if docname not in current:
+                path.unlink()
+                self.remove_output(docname, builder)
+
+    @classmethod
+    def find_generated(
+        cls,
+        srcdir: str | Path,
+        suffixes: Iterable[str],
+        skip: Collection[str | Path],
+    ) -> list[Path]:
+        """Find the sources in the source directory that the extension wrote.
+
+        Args:
+            srcdir: The site's source directory.
+            suffixes: The source suffixes to look for.
+            skip: Directories the build writes into, left unread when they sit
+                inside the source directory.
+
+        Returns:
+            The files whose first line is the marker, sorted by suffix and then
+            path.
+        """
         skipped = [Path(directory).resolve() for directory in skip]
-        current = set(self.docnames.values()) | {self.index_docname}
-        for path in sorted(source_root.rglob(f"*{self.suffix}")):
-            if any(path.resolve().is_relative_to(directory) for directory in skipped):
-                continue
-            docname = path.relative_to(source_root).as_posix().removesuffix(self.suffix)
-            if docname in current or not self.is_generated(path):
-                continue
-            path.unlink()
-            self.remove_output(docname, builder)
+        return [
+            path
+            for suffix in suffixes
+            for path in sorted(Path(srcdir).rglob(f"*{suffix}"))
+            if not any(
+                path.resolve().is_relative_to(directory) for directory in skipped
+            )
+            and cls.is_generated(path)
+        ]
+
+    @classmethod
+    def release_shadowed(
+        cls,
+        srcdir: str | Path,
+        suffixes: Collection[str],
+        skip: Collection[str | Path],
+    ) -> None:
+        """Delete the generated sources that a file of the site's own shadows.
+
+        A generated source and a file of the site's own with another suffix
+        are two files for one document.
+
+        Args:
+            srcdir: The site's source directory.
+            suffixes: The site's source suffixes.
+            skip: Directories the build writes into, left unread when they sit
+                inside the source directory.
+        """
+        for path in cls.find_generated(srcdir, suffixes, skip):
+            suffix = next(suffix for suffix in suffixes if path.name.endswith(suffix))
+            stem = str(path).removesuffix(suffix)
+            others = (Path(stem + other) for other in suffixes if other != suffix)
+            if any(other.is_file() and not cls.is_generated(other) for other in others):
+                path.unlink()
 
     @staticmethod
     def is_generated(path: Path) -> bool:

@@ -36,6 +36,13 @@ When the site sets no `html_theme`, in `conf.py` or with `-D`, the site is built
 [Furo](https://pradyunsg.me/furo/), which sphinx-skos depends on. A site that sets any theme keeps
 it. The extension adds no stylesheet, script, static path or theme option.
 
+## Front page
+
+When the site has no document at its `root_doc`, in any source suffix, and vocabulary pages are
+generated, the extension writes one. Its title is `project` and it lists the vocabularies index
+and then every other document of the site, sorted by name. A site that adds a front page of its
+own gets the generated one deleted on the next build.
+
 ## skos_vocabularies
 
 - **Type**: list of strings

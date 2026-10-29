@@ -613,3 +613,99 @@ class TestControlCharacters:
         warnings = app.warning.getvalue()
         for start in ("carriage", "line", "with", "bell"):
             assert BASE + start in warnings
+
+
+class TestFrontPage:
+    BOTH_SUFFIXES = {".rst": "restructuredtext", ".md": "restructuredtext"}
+
+    @pytest.mark.sphinx("dirhtml", testroot="no-front-page")
+    def test_a_site_with_no_index_gets_a_front_page_listing_its_pages(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.titles["index"].astext() == "Front page site"
+        assert app.env.toctree_includes["index"] == [INDEX, "guide", "more/deep"]
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx("dirhtml", testroot="generated-only")
+    def test_a_site_of_generated_pages_only_gets_a_front_page(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.toctree_includes["index"] == [INDEX]
+        assert app.warning.getvalue() == ""
+        assert (Path(app.outdir) / "index.html").is_file()
+
+    @pytest.mark.sphinx(
+        "dirhtml",
+        testroot="no-front-page",
+        confoverrides={"project": "A *bold* `code` |sub| \\ title_"},
+    )
+    def test_a_project_name_holding_markup_is_shown_as_text(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.titles["index"].astext() == "A *bold* `code` |sub| \\ title_"
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx(
+        "dirhtml",
+        testroot="suffix",
+        srcdir="suffix-with-its-own-index",
+        confoverrides={"exclude_patterns": ["_build"]},
+    )
+    def test_a_site_with_an_index_of_its_own_keeps_it_and_gets_no_front_page(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        app.build()
+
+        original = rootdir / "test-suffix" / "index.txt"
+        assert (Path(app.srcdir) / "index.txt").read_bytes() == original.read_bytes()
+        assert generated_sources(Path(app.srcdir)) == [
+            Path(app.srcdir) / "vocabularies" / "index.txt",
+            Path(app.srcdir) / "vocabularies" / "one" / "first.txt",
+            Path(app.srcdir) / "vocabularies" / "one.txt",
+        ]
+        assert app.warning.getvalue() == ""
+
+    def test_an_index_of_another_suffix_than_the_pages_is_a_root_document(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-no-front-page", site)
+        (site / "index.md").write_text(
+            "Mine\n====\n\n.. toctree::\n\n   vocabularies/index\n   guide\n   more/deep\n",
+            encoding="utf-8",
+        )
+
+        app = make_app(
+            "dirhtml", srcdir=site, confoverrides={"source_suffix": self.BOTH_SUFFIXES}
+        )
+        app.build()
+
+        assert not (site / "index.rst").exists()
+        assert app.env.titles["index"].astext() == "Mine"
+        assert app.warning.getvalue() == ""
+
+    def test_a_front_page_is_removed_once_the_site_writes_an_index_of_its_own(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-no-front-page", site)
+        (site / "index.rst").write_text(f"{MARKER}\n\nFront\n=====\n", encoding="utf-8")
+        (site / "index.md").write_text(
+            "Mine\n====\n\n.. toctree::\n\n   vocabularies/index\n   guide\n   more/deep\n",
+            encoding="utf-8",
+        )
+
+        app = make_app(
+            "dirhtml", srcdir=site, confoverrides={"source_suffix": self.BOTH_SUFFIXES}
+        )
+        app.build()
+
+        assert not (site / "index.rst").exists()
+        assert app.env.titles["index"].astext() == "Mine"
+        assert app.warning.getvalue() == ""
