@@ -11,6 +11,12 @@ All notable changes to this project are recorded here. The format follows
 - The `skos_directory` setting, `vocabularies` by default, names the directory that holds the
   generated pages.
 - An index page, `vocabularies/index`, links every vocabulary. List it in a `toctree`.
+- Every generated page ends with a download field linking its RDF files. A vocabulary's page links
+  four whole files, holding the graph of the vocabulary files it comes from, written beside the
+  page's directory when the site is built with `dirhtml`, for example
+  `vocabularies/date-types.ttl`.
+- A vocabulary's page lists the namespace prefixes its files declare, each linked to its
+  namespace.
 
 ### Changed
 
