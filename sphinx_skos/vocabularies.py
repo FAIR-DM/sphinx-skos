@@ -3,6 +3,7 @@
 import glob
 import hashlib
 import os
+import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Literal, NamedTuple
@@ -13,6 +14,9 @@ from rdflib.term import Literal as RDFLiteral
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
+
+# The names rdflib gives a clashing prefix when files are merged.
+GENERATED_PREFIX = re.compile(r"default\d+")
 
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
 
@@ -94,6 +98,7 @@ class Vocabularies:
         graph: Every statement of every file that could be read.
         fingerprint: A SHA-256 digest of the path and bytes of each file read.
         resources: The kind of each vocabulary, concept and collection, by URI.
+        file_prefixes: The prefixes of the first file that states each subject.
     """
 
     patterns: list[str]
@@ -101,6 +106,7 @@ class Vocabularies:
     graph: Graph
     fingerprint: str
     resources: dict[str, Kind]
+    file_prefixes: dict[str, list[tuple[str, URIRef]]]
 
     def __init__(
         self, patterns: Sequence[str], confdir: str | Path, base_uri: str = ""
@@ -108,6 +114,7 @@ class Vocabularies:
         self.patterns = list(patterns)
         self.base_uri = base_uri
         self.graph = Graph()
+        self.file_prefixes = {}
         digest = hashlib.sha256()
         for path in self.find_files(patterns, confdir):
             data = path.read_bytes() if path.is_file() else None
@@ -159,8 +166,12 @@ class Vocabularies:
             logger.warning("Cannot read vocabulary file %s: %s", path, error)
             return False
         self.graph += single
-        for prefix, namespace in single.namespaces():
+        own_prefixes = list(single.namespaces())
+        for prefix, namespace in own_prefixes:
             self.graph.bind(prefix, namespace, override=False)
+        for subject in set(single.subjects()):
+            if isinstance(subject, URIRef):
+                self.file_prefixes.setdefault(str(subject), own_prefixes)
         return True
 
     def find_resources(self) -> dict[str, Kind]:
@@ -188,11 +199,15 @@ class Vocabularies:
             uri: The resource's URI.
 
         Returns:
-            A graph holding those triples and the files' namespace prefixes.
+            A graph holding those triples. It uses the prefixes of the file
+            that holds the resource, then those of the other files.
         """
-        own = Graph()
-        for prefix, namespace in self.graph.namespaces():
+        own = Graph(bind_namespaces="none")
+        for prefix, namespace in self.file_prefixes.get(uri, []):
             own.bind(prefix, namespace)
+        for prefix, namespace in self.graph.namespaces():
+            if not GENERATED_PREFIX.fullmatch(prefix):
+                own.bind(prefix, namespace, override=False)
         return self.graph.cbd(URIRef(uri), target_graph=own, include_reifications=False)
 
     def title(self, uri: str, language: str) -> str:

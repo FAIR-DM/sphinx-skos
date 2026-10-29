@@ -1,0 +1,13 @@
+@prefix : <https://example.org/vocab/second/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+: a skos:ConceptScheme ;
+    skos:prefLabel "The second scheme"@en .
+
+:thing a skos:Concept ;
+    skos:inScheme : ;
+    skos:prefLabel "A second thing"@en .
+
+:kinds a skos:OrderedCollection ;
+    skos:prefLabel "second kinds"@en ;
+    skos:memberList ( :thing ) .
