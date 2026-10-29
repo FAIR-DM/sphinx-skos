@@ -68,6 +68,13 @@ warnings take part in Sphinx's warning handling, including `-W`.
   property points at or comes from. `listed_members(collection)` gives an ordered collection's
   members in list order and `all_members(collection)` every member it names.
 
+`Vocabularies.files`
+: Each file that could be read as its own `rdflib.Graph`, in file order, holding the prefixes that
+  file declares and no others. `vocabulary_files(uri, language)` gives the files with a statement
+  whose subject is a vocabulary or one of its concepts or collections, `vocabulary_graph(uri,
+  language)` the union of their graphs, and `declared_prefixes(uri, language)` the distinct
+  `(prefix, namespace)` pairs they declare, sorted by prefix and then namespace.
+
 `Vocabularies.own_rdf(uri)`
 : A resource's own RDF as a new graph: every triple with the resource as subject and those of the
   blank nodes they reach, with the namespace prefixes of the vocabulary files.

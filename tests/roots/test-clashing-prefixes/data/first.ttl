@@ -1,0 +1,11 @@
+@prefix : <https://example.org/vocab/> .
+@prefix ex: <https://example.org/ns/one/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/shared> a skos:ConceptScheme ;
+    skos:prefLabel "Shared"@en ;
+    ex:note "Stated in the first file" .
+
+<https://example.org/vocab/shared/thing> a skos:Concept ;
+    skos:inScheme <https://example.org/vocab/shared> ;
+    skos:prefLabel "Thing"@en .

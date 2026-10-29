@@ -452,3 +452,75 @@ class TestVocabulariesNames:
         assert vocabularies.curie("https://example.org/terms/custom") == "ex:custom"
         unprefixed = "https://unprefixed.example/predicate"
         assert vocabularies.curie(unprefixed) == unprefixed
+
+
+class TestVocabulariesFiles:
+    @pytest.fixture
+    def vocabularies(self, rootdir: Path) -> Vocabularies:
+        return Vocabularies(
+            ["data/*.ttl"], rootdir / "test-clashing-prefixes", base_uri=BASE
+        )
+
+    def test_a_vocabulary_stated_across_two_files_has_both_files(
+        self, rootdir: Path, vocabularies: Vocabularies
+    ) -> None:
+        data = rootdir / "test-clashing-prefixes" / "data"
+
+        assert vocabularies.vocabulary_files(BASE + "shared", "en") == [
+            data / "first.ttl",
+            data / "second.ttl",
+        ]
+        assert vocabularies.vocabulary_files(BASE + "apart", "en") == [
+            data / "elsewhere.ttl"
+        ]
+
+    def test_the_whole_graph_of_a_vocabulary_is_the_union_of_its_files(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        whole = vocabularies.vocabulary_graph(BASE + "shared", "en")
+
+        assert (URIRef(BASE + "shared/other"), RDF.type, SKOS.Concept) in whole
+        assert (URIRef(BASE + "shared"), SKOS.prefLabel, None) in whole
+        assert (URIRef(BASE + "apart"), None, None) not in whole
+
+    def test_declared_prefixes_are_those_of_every_file_of_the_vocabulary(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        prefixes = vocabularies.declared_prefixes(BASE + "shared", "en")
+
+        assert {prefix for prefix, _ in prefixes} == {"", "ex", "skos"}
+
+    def test_a_prefix_no_file_of_the_vocabulary_declares_is_absent(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        prefixes = vocabularies.declared_prefixes(BASE + "shared", "en")
+
+        assert "owl" not in {prefix for prefix, _ in prefixes}
+        assert "xsd" not in {prefix for prefix, _ in prefixes}
+        assert vocabularies.declared_prefixes(BASE + "apart", "en") == [
+            ("owl", URIRef("http://www.w3.org/2002/07/owl#")),
+            ("skos", URIRef(str(SKOS))),
+        ]
+
+    def test_one_prefix_bound_to_two_namespaces_gives_both_pairs_once_sorted(
+        self, vocabularies: Vocabularies
+    ) -> None:
+        prefixes = vocabularies.declared_prefixes(BASE + "shared", "en")
+
+        assert [(prefix, str(namespace)) for prefix, namespace in prefixes] == [
+            ("", BASE),
+            ("ex", "https://example.org/ns/one/"),
+            ("ex", "https://example.org/ns/two/"),
+            ("skos", str(SKOS)),
+        ]
+
+    def test_a_vocabulary_that_declares_no_prefix_has_none(
+        self, tmp_path: Path
+    ) -> None:
+        bare = tmp_path / "bare.ttl"
+        bare.write_text(
+            f"<{BASE}bare> a <{SKOS}ConceptScheme> .\n", encoding="utf-8"
+        )
+        vocabularies = Vocabularies([str(bare)], tmp_path)
+
+        assert vocabularies.declared_prefixes(BASE + "bare", "en") == []

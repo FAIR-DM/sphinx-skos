@@ -98,6 +98,8 @@ class Vocabularies:
         graph: Every statement of every file that could be read.
         fingerprint: A SHA-256 digest of the path and bytes of each file read.
         resources: The kind of each vocabulary, concept and collection, by URI.
+        files: The statements of each file that could be read, with only the
+            prefixes that file declares, in file order.
         file_prefixes: The prefixes of the first file that states each subject.
     """
 
@@ -106,6 +108,7 @@ class Vocabularies:
     graph: Graph
     fingerprint: str
     resources: dict[str, Kind]
+    files: dict[Path, Graph]
     file_prefixes: dict[str, list[tuple[str, URIRef]]]
 
     def __init__(
@@ -114,6 +117,7 @@ class Vocabularies:
         self.patterns = list(patterns)
         self.base_uri = base_uri
         self.graph = Graph()
+        self.files = {}
         self.file_prefixes = {}
         digest = hashlib.sha256()
         for path in self.find_files(patterns, confdir):
@@ -165,6 +169,9 @@ class Vocabularies:
         except Exception as error:
             logger.warning("Cannot read vocabulary file %s: %s", path, error)
             return False
+        declared = Graph(bind_namespaces="none")
+        declared.parse(data=data, format="turtle", publicID=self.base_uri or None)
+        self.files[path] = declared
         self.graph += single
         own_prefixes = list(single.namespaces())
         for prefix, namespace in own_prefixes:
@@ -187,6 +194,68 @@ class Vocabularies:
                     if isinstance(subject, URIRef):
                         resources[str(subject)] = kind
         return resources
+
+    def vocabulary_files(self, uri: str, language: str) -> list[Path]:
+        """Return the files that state something about a vocabulary.
+
+        Args:
+            uri: The vocabulary's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The files with a statement whose subject is the vocabulary or one
+            of its concepts or collections, in file order.
+        """
+        subjects = {
+            URIRef(member)
+            for member in (
+                uri,
+                *self.concepts_in(uri, language),
+                *self.collections_in(uri, language),
+            )
+        }
+        return [
+            path
+            for path, graph in self.files.items()
+            if any(subject in subjects for subject in graph.subjects())
+        ]
+
+    def vocabulary_graph(self, uri: str, language: str) -> Graph:
+        """Return the union of the graphs of a vocabulary's files.
+
+        Args:
+            uri: The vocabulary's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            A graph holding every statement of those files, with the prefixes
+            each of them declares.
+        """
+        whole = Graph(bind_namespaces="none")
+        for path in self.vocabulary_files(uri, language):
+            whole += self.files[path]
+            for prefix, namespace in self.files[path].namespaces():
+                whole.bind(prefix, namespace, override=False)
+        return whole
+
+    def declared_prefixes(self, uri: str, language: str) -> list[tuple[str, URIRef]]:
+        """Return the namespace prefixes the files of a vocabulary declare.
+
+        Args:
+            uri: The vocabulary's URI.
+            language: The site's ``language`` setting.
+
+        Returns:
+            The distinct pairs of prefix and namespace, sorted by prefix and
+            then namespace. A prefix rdflib binds without a file declaring it
+            is left out.
+        """
+        pairs = {
+            (prefix, URIRef(namespace))
+            for path in self.vocabulary_files(uri, language)
+            for prefix, namespace in self.files[path].namespaces()
+        }
+        return sorted(pairs, key=lambda pair: (pair[0], str(pair[1])))
 
     def own_rdf(self, uri: str) -> Graph:
         """Return a resource's own RDF.
