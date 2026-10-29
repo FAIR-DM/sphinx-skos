@@ -9,9 +9,9 @@
 **Goals**: G1, G2, G3, G5, G6 and G7 (see [`GOALS.md`](../../GOALS.md)). G3, G5 and G6 are
 amended by this feature, as set out under *Amendments* below.
 
-**Input**: Issue #27, which brings together issues #19, #20, #21, #22 and #23 as one feature: a site that installs
-sphinx-skos gets a finished vocabulary site, with navigation, downloads and a layout, without
-writing Sphinx configuration.
+**Input**: Issue #27, which brings together issues #19, #20, #21, #22 and #23 as one feature: a
+site that installs sphinx-skos gets a finished vocabulary site, with navigation, downloads and a
+theme, without writing Sphinx configuration.
 
 ## Summary
 
@@ -22,9 +22,9 @@ collections, and on every page a way to download its RDF in four formats. A deve
 Sphinx site of their own gets the same pages in one directory, and adds them to their site with
 one entry in a table of contents.
 
-Installing the optional `sphinx-skos[book]` extra gives the site a ready-made layout built on
-sphinx-book-theme, used only when the site chooses no theme of its own. Every setting a site makes
-itself, in `pyproject.toml` or in its own `conf.py`, wins over every default.
+sphinx-skos installs the Furo theme and uses it when the site chooses no theme of its own. Every
+setting a site makes itself, in `pyproject.toml` or in its own `conf.py`, wins over every
+default.
 
 A reader finds a concept from the site's navigation, reads the namespace prefixes a vocabulary
 declares, and takes a concept's RDF, or a whole vocabulary's, in the format they need.
@@ -34,19 +34,18 @@ declares, and takes a concept's RDF, or a whole vocabulary's, in the format they
 This feature changes what the package is for, and amends its stated scope in the same change:
 
 - **README, *Scope & philosophy*.** The package is still not a theme and adds no look-and-feel
-  options, but it ships one optional, ready-made layout, used only when the `book` extra is
-  installed and the site sets no theme, and overridable in full by the site.
+  options. It installs Furo and uses it as the default theme when the site sets none, so a site
+  looks finished without choosing one.
 - **GOALS G5.** Everything site-specific is set in `pyproject.toml` or in the site's own
   `conf.py`.
 - **GOALS G6.** A site's look and feel comes from its Sphinx theme, and the extension works under
-  any theme. With the `book` extra installed and no theme chosen, the theme is sphinx-book-theme
-  with the ready-made layout.
+  any theme. When the site chooses no theme, the theme is Furo.
 - **GOALS G3 and constitution Article XIII.** A page's address is its URI with the base URI
   removed, under the generated-pages directory. It depends on the URI, the base URI and that
   directory's name, and on nothing else.
 - **Constitution Article X.** The extension adds no stylesheet, script, template, image, static
-  file or theme option, except the ready-made layout, which applies only when the `book` extra is
-  installed and the site has chosen no theme.
+  file or theme option. It sets one default, `html_theme = "furo"`, for a site that sets no theme
+  itself, and installs Furo for it.
 - **Constitution Article XI.** Everything a site needs to differ in comes from its
   `pyproject.toml` or its `conf.py`.
 - **ADR 0001** is superseded by a new decision record: generated pages are written into a
@@ -65,8 +64,7 @@ A developer with a few Turtle files and no Sphinx knowledge adds a `[tool.sphinx
 `pyproject.toml`, naming the site's title, its base URI and its vocabulary files, and runs
 `sphinx-skos build`. The site is built with no `conf.py` and no page written by hand. When they
 want more, they add a `docs/` directory of their own: its pages join the site, and its `conf.py`
-can change any setting. With the `book` extra installed and no theme chosen, the site has the
-ready-made layout.
+can change any setting. With no theme chosen, the site uses Furo.
 
 **Why this priority**: It is what makes the site finished out of the box. Every other story is
 seen through a site built this way.
@@ -101,19 +99,11 @@ every resource in the file.
    `sphinx-skos build`, **Then** the command exits non-zero with a message saying what to add.
 9. **Given** the developer passes an output directory to the command, **When** the site is built,
    **Then** it is written there.
-10. **Given** the `book` extra is installed and the site sets no theme, **When** the site is
-    built, **Then** it uses sphinx-book-theme with the ready-made layout: the vocabularies and the
-    site's own top-level pages in the left sidebar on every page, the top bar's search component
-    and the right-hand sidebar both turned off, the layout's stylesheet included, and each
-    generated page's downloads in the theme's download menu in place of the page source.
-11. **Given** the `book` extra is installed and the site sets its own theme, **When** the site is
-    built, **Then** none of the ready-made layout applies: no theme option, stylesheet or menu
-    change comes from the package.
-12. **Given** the `book` extra is installed, the site sets no theme, and its `conf.py` sets one of
-    the theme options the layout sets, **When** the site is built, **Then** the site's value is
-    used and every other part of the layout still applies.
-13. **Given** the `book` extra is not installed and the site sets no theme, **When** the site is
-    built, **Then** it uses Sphinx's default theme and builds without warnings.
+10. **Given** a site that sets no theme, **When** it is built, either with `sphinx-skos build` or
+    with `sphinx-build` and its own `conf.py`, **Then** it uses Furo and builds without warnings,
+    with nothing installed beyond sphinx-skos.
+11. **Given** a site that sets its own `html_theme`, **When** it is built, **Then** that theme is
+    used, with every theme option the site sets.
 
 ---
 
@@ -215,8 +205,8 @@ lists that file's prefixes.
 3. **Given** a vocabulary file, **When** the site is built, **Then** each of the four
    whole-vocabulary files of a vocabulary read from it parses to a graph isomorphic to the file's
    own, with nothing added or dropped.
-4. **Given** the ready-made layout of US1, **When** a reader opens the download menu on any
-   generated page, **Then** it offers that page's downloads in all four formats and nothing else.
+4. **Given** a site built with Furo, and the same site built with alabaster, **When** a reader opens any
+   generated page, **Then** its downloads are offered on the page in all four formats.
 5. **Given** a page written by hand with one of the directives, **When** it is built, **Then** it
    offers no downloads, as it has no RDF copies.
 6. **Given** a vocabulary file that declares namespace prefixes, **When** a reader opens the page
@@ -271,20 +261,15 @@ lists that file's prefixes.
 - **FR-008**: The command MUST exit non-zero, with a message naming what to add, when it finds
   neither a `[tool.sphinx-skos]` table nor a `docs/conf.py`. *(US1)*
 
-**Ready-made layout**
+**Default theme**
 
-- **FR-009**: The package MUST offer an optional extra, `book`, that installs sphinx-book-theme.
-  Without the extra, the package MUST NOT require sphinx-book-theme. *(US1)*
-- **FR-010**: When sphinx-book-theme is installed and the site sets no `html_theme`, the site MUST
-  be built with sphinx-book-theme and the ready-made layout: every vocabulary and every top-level
-  page of the site's own in the left sidebar on every page; the top bar's search component turned
-  off; the right-hand sidebar turned off, with the layout's stylesheet giving the article the width
-  it leaves; each generated page's downloads in the theme's download menu in place of the page
-  source. *(US1, US4)*
-- **FR-011**: Any theme option or other setting the site sets MUST win over the layout's value for
-  it. *(US1)*
-- **FR-012**: When the site sets its own `html_theme`, the package MUST add no theme option,
-  stylesheet or other part of the layout. *(US1)*
+- **FR-009**: The package MUST install Furo as one of its own dependencies. *(US1)*
+- **FR-010**: When the site sets no `html_theme`, the site MUST be built with Furo, whether it is
+  built by `sphinx-skos build` or by `sphinx-build` with the site's own `conf.py`. *(US1)*
+- **FR-011**: A site's own `html_theme`, and every theme option it sets, MUST win over the
+  default. *(US1)*
+- **FR-012**: The package MUST add no stylesheet, template, theme option or other part of a layout
+  for Furo or any other theme. *(US1)*
 
 **Generated-pages directory**
 
@@ -313,8 +298,8 @@ lists that file's prefixes.
 **Downloads**
 
 - **FR-021**: Every generated page MUST offer its downloads in Turtle, JSON-LD, RDF/XML and
-  N-Triples on the page itself, under any theme, with nothing added to the site's configuration.
-  Under the ready-made layout they are offered in the theme's download menu instead. *(US4)*
+  N-Triples on the page itself, as part of its content, under any theme, with nothing added to the
+  site's configuration. *(US4)*
 - **FR-022**: A concept's or collection's downloads MUST be its RDF copies. *(US4)*
 - **FR-023**: The build MUST write one whole-vocabulary file per vocabulary and format, holding the
   graph of every vocabulary file the vocabulary is stated in, with nothing added or dropped. A
@@ -347,10 +332,8 @@ lists that file's prefixes.
   one-command build writes.
 - **Whole-vocabulary file**: a file holding a whole vocabulary in one of the four formats, offered
   from the vocabulary's page.
-- **Download**: a link on a page, or in the theme's download menu, to that page's RDF in one
-  format.
-- **Ready-made layout**: sphinx-book-theme with the settings and stylesheet this feature
-  describes, used only when the `book` extra is installed and the site sets no theme.
+- **Download**: a link on a page to that page's RDF in one format.
+- **Default theme**: Furo, installed with the package and used when the site sets no theme.
 - **Namespace prefix**: a prefix and namespace URI pair declared in a vocabulary file.
 
 ## Success Criteria *(mandatory)*
@@ -361,8 +344,8 @@ lists that file's prefixes.
   [fairdm-vocabularies](https://github.com/FAIR-DM/fairdm-vocabularies) build into a complete site
   with `sphinx-skos build`, warnings treated as errors, from a `[tool.sphinx-skos]` table of three
   settings and no `conf.py`.
-- **SC-002**: With the `book` extra installed and no theme chosen, that site has every part of the
-  ready-made layout with nothing added to its configuration.
+- **SC-002**: With no theme chosen, that site is built with Furo, and Furo's sidebar lists every
+  vocabulary, with nothing installed beyond sphinx-skos and nothing added to its configuration.
 - **SC-003**: In that site, every whole-vocabulary file, in all four formats, parses to a graph
   isomorphic to the vocabulary file it was built from: 100% of them.
 - **SC-004**: In that site, 100% of concepts and collections appear in the navigation beneath
@@ -370,8 +353,7 @@ lists that file's prefixes.
 - **SC-005**: A site built on sphinx-skos 0.3 moves to this version by adding one entry to a table
   of contents and replacing its generated-page `.gitignore` entries with one, and then builds with
   warnings treated as errors.
-- **SC-006**: Under Sphinx's default theme and under one other theme, every generated page offers
-  four downloads, and the build emits no warning.
+- **SC-006**: Under Furo and under alabaster, every generated page offers four downloads, and the build emits no warning.
 
 ## Clarifications
 
@@ -388,10 +370,14 @@ lists that file's prefixes.
   generated front page is written only when the site has none, so a site's own page is never
   written over, and that page lists the generated-pages index in its own table of contents, as a
   site with a `conf.py` does.
-- Q: Where are the downloads under a theme other than the ready-made layout? → A: On the page,
-  as part of its content, so they work under any theme with no template. Under the ready-made
-  layout they are in the theme's download menu, where the page source would be, and are not
-  repeated on the page.
+- Q: Where are the downloads? → A: On the page, as part of its content, under every theme
+  including Furo, so they need no template and no theme-specific menu.
+- Q: Which theme does a site get when it chooses none? → A: Furo, installed with the package, so
+  a site looks finished with no theme to choose. Furo lists the site's tables of contents in its sidebar as it is,
+  hidden ones included, so the navigation of US3 needs no stylesheet, template or theme option of
+  the package's own.
+- Q: Does the default apply to a site built with `sphinx-build` and its own `conf.py`? → A: Yes,
+  when that `conf.py` sets no `html_theme`, so both ways of building give the same site.
 - Q: What does a vocabulary's own RDF copy hold now? → A: What it holds today: the scheme's own
   RDF. Its `<link rel="alternate">` elements are unchanged, so software resolving a vocabulary's
   URI gets the same answer. Only the downloads offered to a person are the whole vocabulary.
@@ -411,9 +397,6 @@ lists that file's prefixes.
 - Q: Can the generated-pages directory be the source directory itself, to keep the old
   addresses? → A: No. The directory holds its own index, which would clash with the site's front
   page, and a directory of its own is what makes one `.gitignore` entry enough.
-- Q: Does the layout apply to a site that sets sphinx-book-theme as its theme itself? → A: No.
-  Setting any theme is the site taking control, and issue #20 gives a site that sets its own theme
-  none of the defaults.
 - Q: Does the reusable GitHub Pages workflow change? → A: Not in this feature. It keeps building
   sites that have a `docs/conf.py`. A version that runs `sphinx-skos build` follows as its own
   change.
@@ -421,7 +404,6 @@ lists that file's prefixes.
 ## Assumptions
 
 - The vocabulary files are Turtle, as `CONTEXT.md` defines a vocabulary file.
-- The ready-made layout is built against sphinx-book-theme 1.4.
 - The one-command build reads the `pyproject.toml` in the directory it is run from.
 - A live-reloading development server, and any command other than `build`, are out of scope.
 - Releasing the package is out of scope.

@@ -5,17 +5,17 @@ overruled at review of the specification.
 
 ## D1. Four stories, by who does what
 
-The five issues describe two people. A developer either builds a site with one command (#21,
-with the layout of #20 as what that site looks like) or adds the pages to a Sphinx site of their
-own (#23). A reader either finds a concept through the navigation (#23, with the sidebar of #20)
-or takes its data away (#19, #22). Downloads and prefixes are one story because a reader looks
-for both for the same reason: to use the vocabulary's RDF somewhere else.
+The five issues describe two people. A developer either builds a site with one command (#21) or
+adds the pages to a Sphinx site of their own (#23), and either way gets Furo when they choose no
+theme (#20). A reader either finds a concept through the navigation (#23) or takes its data away
+(#19, #22). Downloads and prefixes are one story because a reader looks for both for the same
+reason: to use the vocabulary's RDF somewhere else.
 
 ## D2. Downloads are page content under any theme
 
 Issue #19 asks for downloads under any theme with nothing added to `conf.py`, and constitution
-Article X rules out a template. The downloads are therefore part of each page's content. Under the
-ready-made layout of #20 they move into the theme's download menu, so they are not shown twice.
+Article X rules out a template. The downloads are therefore part of each page's content, under
+Furo as under every other theme.
 
 ## D3. The vocabulary's RDF copies keep their meaning
 
@@ -34,3 +34,10 @@ vocabularies: each of them offers the whole file.
 
 The reusable workflow that publishes a site keeps running `sphinx-build` against a `docs/conf.py`.
 Changing it to run `sphinx-skos build` is a separate change to the workflow file.
+
+## D6. Furo is the default theme, with nothing added to it
+
+When a site chooses no theme it gets Furo, installed with the package. Furo's sidebar shows the
+site's tables of contents, hidden ones included, so the navigation needs nothing from the package
+beyond the tables of contents themselves. The package therefore still ships no stylesheet,
+template or theme option, and Article X changes only to allow the one default setting.
