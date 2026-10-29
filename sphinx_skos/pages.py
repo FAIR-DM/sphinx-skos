@@ -25,6 +25,7 @@ class GeneratedPages:
     Args:
         vocabularies: The site's vocabulary files.
         base_uri: The ``skos_base_uri`` setting.
+        directory: The ``skos_directory`` setting.
         source_suffix: The site's ``source_suffix`` setting.
         site_documents: The names of the documents the site wrote itself.
 
@@ -43,6 +44,7 @@ class GeneratedPages:
         self,
         vocabularies: Vocabularies,
         base_uri: str,
+        directory: str,
         source_suffix: Mapping[str, str],
         site_documents: Collection[str],
     ) -> None:
@@ -55,11 +57,11 @@ class GeneratedPages:
         if self.suffix is None:
             logger.warning("source_suffix has no reStructuredText suffix: no pages")
             return
-        if not self.has_base_uri(base_uri):
+        if not self.has_base_uri(base_uri) or not self.has_directory(directory):
             return
         taken = {self.compare_key(docname) for docname in site_documents}
         for uri in sorted(vocabularies.resources):
-            docname = self.find_docname(uri, base_uri)
+            docname = self.find_docname(uri, base_uri, directory)
             if docname is None:
                 continue
             key = self.compare_key(docname)
@@ -87,6 +89,26 @@ class GeneratedPages:
             return True
         logger.warning("skos_vocabularies is set but skos_base_uri is not")
         return False
+
+    @staticmethod
+    def has_directory(directory: str) -> bool:
+        """Say whether pages can be placed in a directory, warning if they cannot.
+
+        Args:
+            directory: The ``skos_directory`` setting.
+
+        Returns:
+            Whether it is a relative path with no empty, ``.`` or ``..`` segment.
+        """
+        segments = directory.split("/")
+        if directory.startswith("/") or any(
+            segment in ("", ".", "..") for segment in segments
+        ):
+            logger.warning(
+                "skos_directory %r is not a relative directory: no pages", directory
+            )
+            return False
+        return True
 
     @staticmethod
     def find_suffix(source_suffix: Mapping[str, str]) -> str | None:
@@ -118,16 +140,17 @@ class GeneratedPages:
         return docname.removesuffix("/index")
 
     @staticmethod
-    def find_docname(uri: str, base_uri: str) -> str | None:
+    def find_docname(uri: str, base_uri: str, directory: str) -> str | None:
         """Return the document name of a resource, or warn why it has none.
 
         Args:
             uri: The resource's URI.
             base_uri: The ``skos_base_uri`` setting.
+            directory: The ``skos_directory`` setting.
 
         Returns:
-            The page address, with ``index`` added when it ends in a slash, or
-            ``None`` if the URI cannot be given a page.
+            The page address in the directory, with ``index`` added when it
+            ends in a slash, or ``None`` if the URI cannot be given a page.
         """
         if not uri.startswith(base_uri):
             logger.warning("%s is outside skos_base_uri and gets no page", uri)
@@ -147,7 +170,7 @@ class GeneratedPages:
         ):
             logger.warning("%s has no usable page address and gets no page", uri)
             return None
-        return address + "index" if address.endswith("/") else address
+        return f"{directory}/{address}" + ("index" if address.endswith("/") else "")
 
     def docname_for(self, uri: str) -> str | None:
         """Return the generated document of a resource.

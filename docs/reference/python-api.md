@@ -12,7 +12,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
 ## Module `sphinx_skos`
 
 `setup(app)`
-: Registers the two settings, the `skos` domain and the build handlers. Sphinx calls it when the
+: Registers the three settings, the `skos` domain and the build handlers. Sphinx calls it when the
   site lists `sphinx_skos` in `extensions`.
 
 `generate_pages(app)`
@@ -91,8 +91,10 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 ## Module `sphinx_skos.pages`
 
-`GeneratedPages(vocabularies, base_uri, source_suffix, site_documents)`
-: The page of every resource that can have one. `docname_for(uri)` gives a resource's document
+`GeneratedPages(vocabularies, base_uri, directory, source_suffix, site_documents)`
+: The page of every resource that can have one, in the `skos_directory` directory.
+  `has_directory(directory)` says whether a directory is usable and warns when it is not.
+  `docname_for(uri)` gives a resource's document
   name, or `None` when it has no page. `write(srcdir)` writes the page sources. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
   their output file, RDF copies and copied source. `uri_for(docname)` gives the resource a

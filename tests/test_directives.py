@@ -33,6 +33,11 @@ def has_tag(paragraph: list[str], text: str, tag: str) -> bool:
     )
 
 
+def page(address: str) -> str:
+    """Return the document name of the generated page at ``address``."""
+    return f"vocabularies/{address}"
+
+
 def page_html(app: SphinxTestApp, address: str) -> str:
     return (Path(app.outdir) / address / "index.html").read_text(encoding="utf-8")
 
@@ -53,7 +58,7 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        paragraphs = field_paragraphs(app, "facts/rich")
+        paragraphs = field_paragraphs(app, page("facts/rich"))
         for label, tag in [
             ("Rich", "en"),
             ("Reich", "de"),
@@ -66,13 +71,13 @@ class TestConceptFacts:
     def test_a_label_with_no_language_shows_no_tag(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert ["Plain"] in field_paragraphs(app, "facts/rich")
+        assert ["Plain"] in field_paragraphs(app, page("facts/rich"))
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_no_hidden_label_appears_on_the_page(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert "secretword" not in page_html(app, "facts/rich")
+        assert "secretword" not in page_html(app, page("facts/rich"))
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_both_definitions_with_their_languages_and_the_notation_appear(
@@ -80,7 +85,7 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        paragraphs = field_paragraphs(app, "facts/rich")
+        paragraphs = field_paragraphs(app, page("facts/rich"))
         for definition, tag in [
             ("Having much money.", "en"),
             ("Mit viel Geld.", "de"),
@@ -92,8 +97,8 @@ class TestConceptFacts:
     def test_the_uri_appears_on_the_page(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert [BASE + "facts/rich"] in field_paragraphs(app, "facts/rich")
-        assert [BASE + "facts/bare"] in field_paragraphs(app, "facts/bare")
+        assert [BASE + "facts/rich"] in field_paragraphs(app, page("facts/rich"))
+        assert [BASE + "facts/bare"] in field_paragraphs(app, page("facts/bare"))
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_a_resource_without_facts_shows_only_its_uri_and_type(
@@ -112,8 +117,8 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        assert app.env.titles["facts/reverse"].astext() == "Beta"
-        assert app.env.titles["facts/bare"].astext() == BASE + "facts/bare"
+        assert app.env.titles[page("facts/reverse")].astext() == "Beta"
+        assert app.env.titles[page("facts/bare")].astext() == BASE + "facts/bare"
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_a_label_holding_markup_is_escaped_and_makes_no_element(
@@ -122,7 +127,7 @@ class TestConceptFacts:
         app.build()
 
         parser = ElementNames()
-        html = page_html(app, "facts/markup")
+        html = page_html(app, page("facts/markup"))
         parser.feed(html)
 
         assert "&lt;b&gt;&amp;amp;&lt;/b&gt;" in html
@@ -136,7 +141,7 @@ class TestFieldTranslation:
     ) -> None:
         app.build()
 
-        doctree = app.env.get_doctree("words/shared")
+        doctree = app.env.get_doctree(page("words/shared"))
         names = [name.astext() for name in doctree.findall(nodes.field_name)]
         bodies = [str(text) for text in doctree.findall(nodes.Text)]
         assert "Bevorzugte Bezeichnungen" in names
@@ -171,14 +176,14 @@ class FieldLinks(HTMLParser):
 def field_links(app: SphinxTestApp, uri: str) -> list[list[str]]:
     """Return the links of each field on the page of ``uri``."""
     parser = FieldLinks()
-    parser.feed(page_html(app, uri.removeprefix(BASE)))
+    parser.feed(page_html(app, page(uri.removeprefix(BASE))))
     return parser.fields
 
 
 def href(app: SphinxTestApp, source: str, target: str) -> str:
     """Return the address the page of ``source`` links to the page of ``target`` by."""
     return app.builder.get_relative_uri(
-        source.removeprefix(BASE), target.removeprefix(BASE)
+        page(source.removeprefix(BASE)), page(target.removeprefix(BASE))
     )
 
 
@@ -300,9 +305,11 @@ class TestConceptLinks:
 
         hub = BASE + "rel/hub"
         address = href(app, hub, BASE + "rel-other/mapped")
-        target = Path(app.outdir) / "rel" / "hub" / address / "index.html"
+        target = (
+            Path(app.outdir) / "vocabularies" / "rel" / "hub" / address / "index.html"
+        )
         assert target.resolve() == (
-            Path(app.outdir) / "rel-other" / "mapped" / "index.html"
+            Path(app.outdir) / "vocabularies" / "rel-other" / "mapped" / "index.html"
         )
         assert target.resolve().is_file()
 
@@ -311,7 +318,7 @@ class TestConceptLinks:
         app.build()
 
         hub = BASE + "rel/hub"
-        html = page_html(app, "rel/hub")
+        html = page_html(app, page("rel/hub"))
         links = [link for fields in field_links(app, hub) for link in fields]
         assert "JaVaScript:alert(1)" in html
         assert "data:text/plain,x" in html
@@ -323,7 +330,7 @@ class TestConceptLinks:
     ) -> None:
         app.build()
 
-        assert ["plain text"] in field_paragraphs(app, "rel/hub")
+        assert ["plain text"] in field_paragraphs(app, page("rel/hub"))
 
     @pytest.mark.sphinx("dirhtml", testroot="relations")
     def test_a_concept_in_no_vocabulary_links_no_vocabulary(
@@ -355,7 +362,7 @@ class TestVocabularyPage:
     ) -> None:
         app.build()
 
-        paragraphs = field_paragraphs(app, "rel")
+        paragraphs = field_paragraphs(app, page("rel"))
         assert any(has_tag(p, "Relations", "en") for p in paragraphs)
         assert any(has_tag(p, "The relations.", "en") for p in paragraphs)
         assert any(has_tag(p, "Describes the relations.", "en") for p in paragraphs)
@@ -366,7 +373,7 @@ class TestVocabularyPage:
     ) -> None:
         app.build()
 
-        fields = list(app.env.get_doctree("rel").findall(nodes.field))
+        fields = list(app.env.get_doctree(page("rel")).findall(nodes.field))
         holding = [
             field
             for text in ("The relations.", "Describes the relations.")
@@ -420,7 +427,7 @@ class TestVocabularyPage:
             for link in links
             if not link.startswith("http")
         ]
-        assert field_paragraphs(app, "rel-empty")[0] == [BASE + "rel-empty"]
+        assert field_paragraphs(app, page("rel-empty"))[0] == [BASE + "rel-empty"]
         assert app.warning.getvalue() == ""
 
 
@@ -430,7 +437,8 @@ class TestCollectionPage:
         app.build()
 
         assert any(
-            has_tag(p, "Beta set", "en") for p in field_paragraphs(app, "rel/col-b")
+            has_tag(p, "Beta set", "en")
+            for p in field_paragraphs(app, page("rel/col-b"))
         )
 
     @pytest.mark.sphinx("dirhtml", testroot="relations")
@@ -514,14 +522,14 @@ class TestHandWrittenDirectives:
 
         by_hand = shown_fields(app, "guide", BASE + name)
         assert len(by_hand) > 1
-        assert by_hand == shown_fields(app, name, BASE + name)
+        assert by_hand == shown_fields(app, page(name), BASE + name)
 
     @pytest.mark.sphinx("dirhtml", testroot="prose")
     def test_the_generated_pages_are_still_built(self, app: SphinxTestApp) -> None:
         app.build()
 
         for name in ("rel/hub", "rel", "rel/col-a"):
-            assert (Path(app.outdir) / name / "index.html").is_file()
+            assert (Path(app.outdir) / page(name) / "index.html").is_file()
 
     @pytest.mark.sphinx("dirhtml", testroot="prose")
     def test_only_generated_pages_have_copies_and_alternate_links(
@@ -530,8 +538,8 @@ class TestHandWrittenDirectives:
         app.build()
 
         for name in ("rel/hub", "rel", "rel/col-a"):
-            assert (Path(app.outdir) / name / "index.ttl").is_file()
-            assert 'rel="alternate"' in page_html(app, name)
+            assert (Path(app.outdir) / page(name) / "index.ttl").is_file()
+            assert 'rel="alternate"' in page_html(app, page(name))
         for name in ("guide", "sections"):
             assert not list((Path(app.outdir) / name).glob("index.[!h]*"))
             assert 'rel="alternate"' not in page_html(app, name)
@@ -617,9 +625,7 @@ def field_of(app: SphinxTestApp, docname: str, value: str) -> nodes.field:
 
 def name_links(field: nodes.field) -> list[str]:
     """Return the addresses the field's name links to."""
-    return [
-        str(reference["refuri"]) for reference in field[0].findall(nodes.reference)
-    ]
+    return [str(reference["refuri"]) for reference in field[0].findall(nodes.reference)]
 
 
 def literal_texts(graph: Graph, node: URIRef | BNode) -> list[str]:
@@ -650,7 +656,7 @@ class TestEveryProperty:
         app.build()
 
         expected = literal_texts(properties_graph(rootdir), URIRef(BASE + name))
-        doctree = app.env.get_doctree(name)
+        doctree = app.env.get_doctree(page(name))
         shown = {
             str(text)
             for field_list in doctree.findall(nodes.field_list)
@@ -697,7 +703,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        doctree = app.env.get_doctree(name)
+        doctree = app.env.get_doctree(page(name))
         names = [
             field[0]
             for field in next(doctree.findall(nodes.field_list)).children
@@ -734,7 +740,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        assert name_links(field_of(app, name, value)) == []
+        assert name_links(field_of(app, page(name), value)) == []
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
     def test_each_metadata_property_has_a_separate_field(
@@ -743,7 +749,7 @@ class TestEveryProperty:
         app.build()
 
         values = ["2024-01-02", "2024-02-03", "2024-05-01", "1.2.0", "PROP-1"]
-        fields = [field_of(app, "prop", value).astext() for value in values]
+        fields = [field_of(app, page("prop"), value).astext() for value in values]
         assert len(set(fields)) == len(values)
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
@@ -752,7 +758,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        field = field_of(app, "prop", "https://example.org/agents/maker")
+        field = field_of(app, page("prop"), "https://example.org/agents/maker")
         references = [
             (reference.astext(), reference["refuri"])
             for reference in field[1].findall(nodes.reference)
@@ -766,7 +772,7 @@ class TestEveryProperty:
         app.build()
 
         unnamed = "https://example.org/agents/unnamed"
-        field = field_of(app, "prop", unnamed)
+        field = field_of(app, page("prop"), unnamed)
         assert [r.astext() for r in field[1].findall(nodes.reference)] == [unnamed]
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
@@ -783,7 +789,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        assert any(has_tag(p, text, tag) for p in field_paragraphs(app, "prop"))
+        assert any(has_tag(p, text, tag) for p in field_paragraphs(app, page("prop")))
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
     def test_a_blank_node_shows_its_own_statements_nested_in_the_field(
@@ -791,7 +797,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        field = field_of(app, "prop", "Ada Example")
+        field = field_of(app, page("prop"), "Ada Example")
         nested = list(field[1].findall(nodes.field_list))
         assert len(nested) == 3
         assert [n.astext().count("Example") for n in nested] == [1, 1, 1]
@@ -802,7 +808,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        field = field_of(app, "prop/item", "deep value")
+        field = field_of(app, page("prop/item"), "deep value")
         part = [
             node
             for node in field[1].findall(nodes.field_list)
@@ -827,7 +833,7 @@ class TestEveryProperty:
                 [
                     field.astext()
                     for name in PROPERTIES
-                    for field in app.env.get_doctree(name).findall(nodes.field)
+                    for field in app.env.get_doctree(page(name)).findall(nodes.field)
                 ]
             )
 

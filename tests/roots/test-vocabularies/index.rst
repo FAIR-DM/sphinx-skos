@@ -3,4 +3,4 @@ Test site
 
 .. toctree::
 
-   date-types
+   vocabularies/date-types

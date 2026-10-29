@@ -55,6 +55,7 @@ def generate_pages(app: Sphinx) -> None:
     pages = GeneratedPages(
         vocabularies,
         app.config.skos_base_uri,
+        app.config.skos_directory,
         app.config.source_suffix,
         find_site_documents(app),
     )
@@ -137,8 +138,9 @@ def find_outdated(
 def setup(app: Sphinx) -> ExtensionMetadata:
     """Register the extension with Sphinx.
 
-    Registers the ``skos_vocabularies`` and ``skos_base_uri`` settings, the
-    ``skos`` domain and the handlers that write the pages and their RDF copies.
+    Registers the ``skos_vocabularies``, ``skos_base_uri`` and ``skos_directory``
+    settings, the ``skos`` domain and the handlers that write the pages and
+    their RDF copies.
 
     Args:
         app: The Sphinx application building the site.
@@ -148,6 +150,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     """
     app.add_config_value("skos_vocabularies", [], "env", types=[list])
     app.add_config_value("skos_base_uri", "", "env", types=[str])
+    app.add_config_value("skos_directory", "vocabularies", "env", types=[str])
     app.add_domain(SKOSDomain)
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)

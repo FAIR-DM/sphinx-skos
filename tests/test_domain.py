@@ -106,7 +106,7 @@ class TestRebuild:
 
         app = build(make_app, site)
 
-        assert app.env.titles["methods/survey"].astext() == "Poll"
+        assert app.env.titles["vocabularies/methods/survey"].astext() == "Poll"
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
@@ -132,7 +132,7 @@ class TestRebuild:
         assert not (
             Path(app.outdir) / "_sources" / "methods" / "loose.rst.txt"
         ).exists()
-        assert "methods/loose" not in app.env.found_docs
+        assert "vocabularies/methods/loose" not in app.env.found_docs
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
@@ -164,7 +164,7 @@ class TestRebuild:
 
         app = build(make_app, site)
 
-        assert {"added", "added/first"} <= app.env.found_docs
+        assert {"vocabularies/added", "vocabularies/added/first"} <= app.env.found_docs
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
@@ -191,7 +191,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        sources = sorted((site / "date-types").glob("*.rst"))
+        sources = sorted((site / "vocabularies" / "date-types").glob("*.rst"))
         before = {path: path.stat().st_mtime_ns for path in sources}
 
         build(make_app, site)
@@ -215,7 +215,9 @@ class TestRebuildLinks:
 
         app = build(make_app, site)
 
-        links = list(app.env.get_doctree("link/from").findall(addnodes.pending_xref))
+        links = list(
+            app.env.get_doctree("vocabularies/link/from").findall(addnodes.pending_xref)
+        )
         assert [link.astext() for link in links] == ["After"]
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files

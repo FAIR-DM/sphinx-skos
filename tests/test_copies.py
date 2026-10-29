@@ -89,7 +89,7 @@ def expected_own_rdf(files: Graph, uri: str) -> Graph:
 
 def copy_file(app: SphinxTestApp, address: str, suffix: str) -> Path:
     """Return where a page's copy in one format is written."""
-    page = Path(app.builder.get_outfilename(address))
+    page = Path(app.builder.get_outfilename(f"vocabularies/{address}"))
     return page.with_suffix(suffix)
 
 
@@ -119,7 +119,9 @@ class TestRdfCopies:
 
         for address in ADDRESSES:
             for suffix in FORMATS:
-                assert (Path(app.outdir) / address / f"index{suffix}").is_file()
+                assert (
+                    Path(app.outdir) / "vocabularies" / address / f"index{suffix}"
+                ).is_file()
 
     @pytest.mark.sphinx("html", testroot="vocabularies")
     def test_every_page_has_four_copies_beside_its_file_under_html(
@@ -129,7 +131,9 @@ class TestRdfCopies:
 
         for address in ADDRESSES:
             for suffix in FORMATS:
-                assert (Path(app.outdir) / f"{address}{suffix}").is_file()
+                assert (
+                    Path(app.outdir) / "vocabularies" / f"{address}{suffix}"
+                ).is_file()
 
     @pytest.mark.parametrize("builder", ["dirhtml", "html"])
     def test_every_copy_is_the_resources_own_rdf_from_the_files(
@@ -202,7 +206,9 @@ class TestRdfCopies:
         app.build()
 
         for name in ["first", "second", "third"]:
-            text = (Path(app.outdir) / name / "kinds" / "index.ttl").read_text()
+            text = (
+                Path(app.outdir) / "vocabularies" / name / "kinds" / "index.ttl"
+            ).read_text()
             assert f"@prefix : <https://example.org/vocab/{name}/> ." in text
             assert "default" not in text
             assert ":kinds a skos:OrderedCollection" in text
@@ -230,7 +236,9 @@ class TestRdfCopies:
 
         for suffix in FORMATS:
             assert not copy_file(rebuilt, "methods/loose", suffix).exists()
-        assert not (Path(rebuilt.outdir) / "methods" / "loose").exists()
+        assert not (
+            Path(rebuilt.outdir) / "vocabularies" / "methods" / "loose"
+        ).exists()
 
 
 class TestAlternateLinks:
@@ -245,7 +253,7 @@ class TestAlternateLinks:
         app.build()
 
         for address in ADDRESSES:
-            page = Path(app.builder.get_outfilename(address))
+            page = Path(app.builder.get_outfilename(f"vocabularies/{address}"))
             links = alternate_links(page)
             assert {link["type"]: link["href"] for link in links} == {
                 media_type: f"index{suffix}"
@@ -261,7 +269,7 @@ class TestAlternateLinks:
     ) -> None:
         app.build()
 
-        page = Path(app.builder.get_outfilename("date-types/available"))
+        page = Path(app.builder.get_outfilename("vocabularies/date-types/available"))
         assert {link["href"] for link in alternate_links(page)} == {
             f"available{suffix}" for suffix in FORMATS
         }
@@ -304,7 +312,7 @@ class TestRelativeIris:
         assert published
         for path in published:
             assert "file:" not in path.read_text(encoding="utf-8")
-        copy = Path(app.outdir) / "thing" / "index.nt"
+        copy = Path(app.outdir) / "vocabularies" / "thing" / "index.nt"
         assert "<https://example.org/vocab/other-thing>" in copy.read_text(
             encoding="utf-8"
         )
