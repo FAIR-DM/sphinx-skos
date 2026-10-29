@@ -8,6 +8,10 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
+- The `sphinx-skos build` command builds a site from a `[tool.sphinx-skos]` table in
+  `pyproject.toml`, with the `dirhtml` builder and no `conf.py`, into `_build/site/`. `-o` chooses
+  the output directory and `-W` makes a warning fail the build. A `docs/` directory adds pages of
+  the site's own, and a `docs/conf.py` is used as it is.
 - The `skos_directory` setting, `vocabularies` by default, names the directory that holds the
   generated pages.
 - An index page, `vocabularies/index`, links every vocabulary. List it in a `toctree`.

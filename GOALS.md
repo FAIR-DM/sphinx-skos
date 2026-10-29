@@ -18,10 +18,10 @@ Importance is a tag on each goal, not a ranking:
 |----|------|------------|--------|-------|
 | G1 | A site turns a list of vocabulary files into one page for every vocabulary, concept and collection, each a real Sphinx document | Essential | | |
 | G2 | Every page has RDF copies beside it in Turtle, JSON-LD, RDF/XML and N-Triples, holding that resource's own RDF and nothing else | Essential | | |
-| G3 | A page's address is its URI with the base URI removed, so a redirect from a resource's URI reaches its page with no lookup table | Essential | | |
+| G3 | A page's address is its URI with the base URI removed, under the generated-pages directory, so a redirect from a resource's URI reaches its page with no lookup table | Essential | | |
 | G4 | A concept page shows what a reader needs to use the concept: its labels in every language, definition, notation, the collections it is in and its mapping links | Essential | | |
-| G5 | Any organisation can publish its vocabularies with it, with everything site-specific set in the site's `conf.py` | Essential | | |
-| G6 | A site's look and feel comes entirely from its Sphinx theme, and the extension works under any theme | Essential | | Requests for logos, colours or layout options are answered by Sphinx's theme settings, not by this package |
+| G5 | Any organisation can publish its vocabularies with it, with everything site-specific set in `pyproject.toml` or in the site's own `conf.py` | Essential | | |
+| G6 | A site's look and feel comes from its Sphinx theme, and the extension works under any theme; when the site chooses no theme, the theme is Furo | Essential | | Requests for logos, colours or layout options are answered by Sphinx's theme settings, not by this package |
 | G7 | Software can find a page's RDF copies from the page itself | Expected | | |
 | G8 | The directives that build the generated pages can be used by hand in a site's prose pages | Expected | | |
 
@@ -29,8 +29,9 @@ Importance is a tag on each goal, not a ranking:
 
 The intended design, recorded so the first features start from it. None of it is built yet.
 
-- **Configuration in `conf.py`.** `extensions = ["sphinx_skos"]`, `skos_vocabularies` as a list
-  of file patterns, `skos_base_uri` as the base URI.
+- **Configuration in `pyproject.toml` or `conf.py`.** A `[tool.sphinx-skos]` table with the title,
+  the base URI and a list of file patterns, built by `sphinx-skos build`; or, in a site's own
+  `conf.py`, `extensions = ["sphinx_skos"]`, `skos_vocabularies` and `skos_base_uri`.
 - **Built with `dirhtml`,** so a page address is a directory and the URI maps onto it directly.
 - **Pages are generated as source documents when the build starts,** the way `autosummary`
   generates its stubs. Each holds one directive: `skos:vocabulary`, `skos:concept` or

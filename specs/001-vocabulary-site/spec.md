@@ -18,8 +18,9 @@ A site maintainer lists their vocabulary files and their base URI in `conf.py`, 
 collection in those files. Each page sits at its resource's URI with the base URI removed, and
 has the resource's own RDF beside it in Turtle, JSON-LD, RDF/XML and N-Triples, named from the
 page itself. The directives that build the generated pages can also be written by hand in the
-site's own prose pages. Nothing about how the site looks comes from this package: the pages are
-ordinary Sphinx documents and take their look from the site's theme.
+site's own prose pages. The package offers no look-and-feel options: the pages are ordinary
+Sphinx documents and take their look from the site's theme, which is Furo when the site chooses
+none.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -284,8 +285,9 @@ builds pass and upload the site.
   `skos:concept` or `skos:collection`. *(US1)*
 - **FR-003**: The site maintainer MUST NOT need to write, keep or commit the generated pages. They
   are produced when the build starts. *(US1)*
-- **FR-004**: A resource's page address MUST be its URI with the base URI removed, and depend on
-  nothing else. Under `dirhtml` that address is a directory in the output. *(US1)*
+- **FR-004**: A resource's page address MUST be its URI with the base URI removed, under the
+  generated-pages directory, and depend on nothing else but that directory's name. Under
+  `dirhtml` that address is a directory in the output. *(US1)*
 - **FR-005**: When several vocabulary files describe the same resource, its page and RDF copies
   MUST be built from all of their statements together. *(US1)*
 - **FR-006**: The build MUST emit a warning, naming what it concerns, and continue, for each of:
@@ -295,9 +297,9 @@ builds pass and upload the site.
   everything else is. *(US1)*
 - **FR-007**: A rebuild after a vocabulary file changes, a file is added or removed, or a
   resource is added or removed MUST give the same output as a clean build. *(US1)*
-- **FR-008**: Generated pages MUST NOT cause warnings about documents missing from a table of
-  contents, and the site MUST be able to include vocabulary pages in its own tables of contents.
-  *(US1)*
+- **FR-008**: Generated pages MUST be listed in tables of contents, so that they cause no
+  warning about a document missing from one, and the site MUST be able to include the
+  generated pages in its own tables of contents. *(US1)*
 - **FR-009**: Every fixed piece of text the extension writes into a page MUST be marked for
   translation through Sphinx's message catalogue. Text from a vocabulary file MUST NOT be
   translated. *(US1)*
@@ -363,7 +365,8 @@ builds pass and upload the site.
 **Look and feel**
 
 - **FR-024**: The extension MUST add no stylesheet, script, HTML template, image, static file or
-  theme option, and its pages MUST build without warnings under any Sphinx HTML theme.
+  theme option. It MAY set the default theme, Furo, for a site that sets none, and its pages
+  MUST build without warnings under any Sphinx HTML theme.
   *(US1, US2)*
 
 **Publishing to GitHub Pages**
@@ -427,4 +430,4 @@ builds pass and upload the site.
 - Linking to a resource from a prose page with a cross-reference role, an index of all
   vocabularies, and search are out of scope.
 - Releasing the package is out of scope.
-- Look and feel is out of scope permanently (G6, constitution Article X).
+- Look and feel options are out of scope permanently (G6, constitution Article X).

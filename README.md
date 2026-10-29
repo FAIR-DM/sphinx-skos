@@ -36,20 +36,29 @@ elements. Your own pages can show any resource with the `skos:vocabulary`, `skos
 
 ## Usage
 
-```python
-# conf.py
-extensions = ["sphinx_skos"]
-skos_vocabularies = ["../vocabularies/*.ttl"]
-skos_base_uri = "https://w3id.org/example/vocabularies/"
+Describe the site in `pyproject.toml`. Keep the vocabulary files outside the `vocabularies/`
+directory, which holds the generated pages:
+
+```toml
+[tool.sphinx-skos]
+title = "Example vocabularies"
+base-uri = "https://w3id.org/example/vocabularies/"
+vocabularies = ["data/*.ttl"]
 ```
 
-Build with the `dirhtml` builder:
+Build the site with one command:
 
 ```console
-sphinx-build -b dirhtml docs docs/_build/dirhtml
+sphinx-skos build
 ```
 
-A concept's page lives at its URI with `skos_base_uri` removed, so a redirect from the URI's
+The site is written to `_build/site/`, with a front page, a page for every vocabulary, concept and
+collection, and Furo as its theme. Add a `docs/` directory for prose pages of your own, or a
+`docs/conf.py` to change any setting. A site that already has a `conf.py` can instead list
+`sphinx_skos` in its `extensions`, set `skos_vocabularies` and `skos_base_uri`, and build with
+`sphinx-build -b dirhtml`.
+
+A concept's page lives at its URI with the base URI removed, so a redirect from the URI's
 domain to the site maps one address directly onto the other. See [Publish vocabulary files as a
 site](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/how-to/publish-vocabulary-files.md)
 for the steps, [RDF
@@ -84,8 +93,9 @@ any vocabulary from any organisation.
 **What it is not.**
 
 - **Not a theme.** Logos, colours, fonts and layout come from Sphinx's own theme settings in your
-  `conf.py`: `html_theme`, `html_logo`, `html_theme_options` and the rest. The extension renders
-  content only. Requests to add a logo, a colour scheme or a layout option to this package will
+  `conf.py`: `html_theme`, `html_logo`, `html_theme_options` and the rest. The extension adds no
+  look-and-feel option. It installs [Furo](https://pradyunsg.me/furo/) and uses it when the site
+  sets no theme, so a site looks finished without choosing one. Requests to add a logo, a colour scheme or a layout option to this package will
   be closed with a pointer to [Sphinx's HTML theming
   documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
 - **Not a vocabulary editor.** The Turtle files are the source. The extension reads them and
