@@ -3,6 +3,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from docutils import nodes
+from sphinx import addnodes
 from sphinx.testing.util import SphinxTestApp
 
 from sphinx_skos.pages import MARKER
@@ -231,6 +233,104 @@ class TestIndexPage:
         source = (site / "vocabularies" / "index.rst").read_text(encoding="utf-8")
         assert source.startswith(MARKER)
         assert "skos:concept" not in source
+
+
+def descendants(app: SphinxTestApp, docname: str) -> set[str]:
+    """Return every document below ``docname`` in the table of contents."""
+    found: set[str] = set()
+    pending = list(app.env.toctree_includes.get(docname, []))
+    while pending:
+        child = pending.pop()
+        if child not in found:
+            found.add(child)
+            pending.extend(app.env.toctree_includes.get(child, []))
+    return found
+
+
+class TestVocabularyNavigation:
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_vocabulary_lists_its_concepts_then_its_collections(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        vocabulary = BASE + "date-types"
+        expected = [
+            domain.pages.docname_for(uri)
+            for uri in (
+                *domain.vocabularies.concepts_in(vocabulary, app.config.language),
+                *domain.vocabularies.collections_in(vocabulary, app.config.language),
+            )
+        ]
+        assert len(expected) == 6
+        assert app.env.toctree_includes["vocabularies/date-types"] == expected
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_every_concept_and_collection_is_below_its_vocabulary(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        resources = domain.vocabularies.resources
+        language = app.config.language
+        for vocabulary in (
+            uri for uri, kind in resources.items() if kind == "vocabulary"
+        ):
+            below = descendants(app, domain.pages.docname_for(vocabulary))
+            members = [
+                *domain.vocabularies.concepts_in(vocabulary, language),
+                *domain.vocabularies.collections_in(vocabulary, language),
+            ]
+            assert {domain.pages.docname_for(uri) for uri in members} <= below
+        assert "vocabularies/date-types/in-order" in descendants(app, INDEX)
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_vocabulary_page_body_shows_no_toctree(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        doctree = app.env.get_and_resolve_doctree(
+            "vocabularies/date-types", app.builder, tags=app.builder.tags
+        )
+        assert not list(doctree.findall(addnodes.toctree))
+        assert not [
+            node
+            for node in doctree.findall(nodes.compound)
+            if "toctree-wrapper" in node["classes"] and len(node.children)
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_index_hides_only_resources_no_vocabulary_lists(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        listed = set(app.env.toctree_includes[INDEX])
+        assert listed == {
+            "vocabularies/date-types",
+            "vocabularies/methods",
+            "vocabularies/instruments",
+            "vocabularies/methods/loose",
+        }
+
+    @pytest.mark.sphinx("dirhtml", testroot="shared")
+    def test_a_concept_in_two_vocabularies_is_listed_by_both_without_warning(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        both = "vocabularies/common/both"
+        assert both in app.env.toctree_includes["vocabularies/north"]
+        assert both in app.env.toctree_includes["vocabularies/south"]
+        assert (
+            "vocabularies/common/north-only"
+            not in (app.env.toctree_includes["vocabularies/south"])
+        )
+        assert sum(docname == both for docname in app.env.found_docs) == 1
+        assert app.warning.getvalue() == ""
 
 
 class TestThemesAndBuilders:

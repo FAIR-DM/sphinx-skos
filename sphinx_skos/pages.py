@@ -1,6 +1,6 @@
 """Work out the page of every resource and write its source file."""
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from pathlib import Path
 
 from sphinx.builders import Builder
@@ -216,31 +216,69 @@ class GeneratedPages:
             kind: The resource's kind.
 
         Returns:
-            The marker line and the resource's directive.
+            The marker line and the resource's directive. A vocabulary's source
+            also holds a hidden list of its concepts and then its collections
+            that have a page.
         """
-        return f"{MARKER}\n\n.. skos:{kind}:: {uri}\n"
+        text = f"{MARKER}\n\n.. skos:{kind}:: {uri}\n"
+        if kind == "vocabulary":
+            text += self.toctree_text(self.members_of(uri), ":hidden:")
+        return text
+
+    def members_of(self, vocabulary: str) -> list[str]:
+        """Return the concepts and then the collections of a vocabulary.
+
+        Args:
+            vocabulary: The vocabulary's URI.
+
+        Returns:
+            The URIs of those that have a page, in the order of the
+            vocabulary's own page.
+        """
+        found = [
+            *self.vocabularies.concepts_in(vocabulary, self.language),
+            *self.vocabularies.collections_in(vocabulary, self.language),
+        ]
+        return [uri for uri in found if uri in self.docnames]
+
+    def toctree_text(self, uris: Iterable[str], option: str) -> str:
+        """Return a ``toctree`` directive listing the pages of some resources.
+
+        Args:
+            uris: The resources to list, in order.
+            option: The directive option line, such as ``:hidden:``.
+
+        Returns:
+            The directive, or an empty string if there is nothing to list.
+        """
+        entries = "".join(f"   /{self.docnames[uri]}\n" for uri in uris)
+        if not entries:
+            return ""
+        return f"\n.. toctree::\n   {option}\n\n{entries}"
 
     def index_text(self) -> str:
         """Return the source of the index page.
 
         Returns:
             The marker line, the translated title, a list of every vocabulary
-            with a page and a hidden list of every concept and collection with
-            a page.
+            with a page and a hidden list of the concepts and collections with
+            a page that no vocabulary lists.
         """
         title = translate("Vocabularies")
         uris = self.vocabularies.sort_by_title(self.docnames, self.language)
         kinds = self.vocabularies.resources
-        text = f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n"
-        for options, wanted in ((":maxdepth: 1", True), (":hidden:", False)):
-            entries = [
-                f"   /{self.docnames[uri]}\n"
-                for uri in uris
-                if (kinds[uri] == "vocabulary") is wanted
-            ]
-            if entries:
-                text += f"\n.. toctree::\n   {options}\n\n{''.join(entries)}"
-        return text
+        vocabularies = [uri for uri in uris if kinds[uri] == "vocabulary"]
+        listed = {
+            uri for vocabulary in vocabularies for uri in self.members_of(vocabulary)
+        }
+        unlisted = [
+            uri for uri in uris if kinds[uri] != "vocabulary" and uri not in listed
+        ]
+        return (
+            f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n"
+            + self.toctree_text(vocabularies, ":maxdepth: 1")
+            + self.toctree_text(unlisted, ":hidden:")
+        )
 
     def write(self, srcdir: str | Path) -> None:
         """Write the source of every page into the source directory.

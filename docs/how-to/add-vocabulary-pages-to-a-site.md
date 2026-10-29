@@ -62,5 +62,6 @@ the next version they are in `skos_directory`.
 
 ## The result
 
-Every generated page is under `skos_directory`, the index lists them, and a build that treats
+Every generated page is under `skos_directory`, the index lists the vocabularies, and the
+theme's navigation shows each vocabulary's concepts and collections beneath it. A build that treats
 warnings as errors (`-W`) passes. Pages from an earlier version are gone.
