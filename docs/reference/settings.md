@@ -6,8 +6,8 @@ site](../how-to/publish-vocabulary-files.md).
 
 ## The pyproject.toml table
 
-A site can set `project`, `skos_base_uri`, `skos_vocabularies` and `skos_directory` in a
-`[tool.sphinx-skos]` table instead of in `conf.py`. A site built with
+A site can set `project`, `html_logo`, `skos_base_uri`, `skos_vocabularies` and `skos_directory`
+in a `[tool.sphinx-skos]` table instead of in `conf.py`. A site built with
 [`sphinx-skos build`](command.md) can have no `conf.py` at all, and then the table, with a title,
 a base URI and a list of vocabulary patterns, is the whole configuration:
 
@@ -17,24 +17,31 @@ title = "Example vocabularies"
 base-uri = "https://example.org/vocab/"
 vocabularies = ["data/*.ttl"]
 directory = "vocabularies"
+logo = "docs/_static/logo.svg"
 ```
 
-| Key            | Sets                |
-| -------------- | ------------------- |
-| `title`        | `project`           |
-| `base-uri`     | `skos_base_uri`     |
-| `vocabularies` | `skos_vocabularies` |
-| `directory`    | `skos_directory`    |
+| Key            | Sets                        |
+| -------------- | --------------------------- |
+| `title`        | `project` and `html_title`  |
+| `base-uri`     | `skos_base_uri`             |
+| `vocabularies` | `skos_vocabularies`         |
+| `directory`    | `skos_directory`            |
+| `logo`         | `html_logo`                 |
+
+`title` names the site in the theme too, so the sidebar shows the title alone, without the
+word "documentation" Sphinx adds. It sets `html_title` only when it sets `project` and the site sets no
+`html_title` of its own. `logo` is the path of an image file, read from the directory of the
+`pyproject.toml`. Sphinx copies the file into the built site and the theme shows it.
 
 The table is read from the nearest `pyproject.toml` at or above the directory that holds
 `conf.py`, or above the current directory when the site has none. The search stops at the first `pyproject.toml` it finds: if that file has no table,
 no setting comes from a file further up. A relative pattern in `vocabularies` is read from the
-directory of that `pyproject.toml`. A value that `conf.py` or `-D` sets wins over the table, even
+directory of that `pyproject.toml`, and so is `logo`. A value that `conf.py` or `-D` sets wins over the table, even
 when it equals the default. A key the table does not know gives a build warning that names it.
 
 ## The order settings are read in
 
-For each of the four settings, the first source that sets it wins:
+For each setting the table can hold, the first source that sets it wins:
 
 1. `-D` on the Sphinx command line.
 2. The site's `conf.py`, even when it sets the value to the default.
@@ -48,11 +55,24 @@ When the site sets no `html_theme`, in `conf.py` or with `-D`, the site is built
 it. The extension adds no stylesheet, script, static path or theme option. This holds whether the
 site is built with `sphinx-skos build` or with `sphinx-build`.
 
+## Navigation
+
+The theme's navigation keeps the children of every top-level entry, and below that it opens only
+the branch of the page being read. On a concept's page it lists the concept's vocabulary with
+that vocabulary's concepts and collections, and the other vocabularies without theirs. A site of
+many vocabularies would otherwise list every concept of every vocabulary on every page.
+
+The extension does this by replacing the `toctree` function that a theme calls to draw its
+navigation, in the `html-page-context` event, before the theme reads it. The entries and their
+links are Sphinx's own. Any theme that draws its navigation with `toctree` gets the same
+entries.
+
 ## Front page
 
 When the site has no document at its `root_doc`, in any source suffix, and vocabulary pages are
-generated, the extension writes one. Its title is `project` and it lists the vocabularies index
-and then every other document of the site, sorted by name. A site that adds a front page of its
+generated, the extension writes one. Its title is `project` and it lists the front page itself,
+as "Home", then the vocabularies index and then every other document of the site, sorted by
+name, so the navigation leads back to it from every page. A site that adds a front page of its
 own gets the generated one deleted on the next build.
 
 The front page is the one generated file outside the [generated-pages

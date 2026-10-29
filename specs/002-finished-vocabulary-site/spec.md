@@ -176,6 +176,10 @@ beneath its vocabulary in the site's table-of-contents tree.
    **Then** it adds nothing to the page body: it is hidden.
 5. **Given** a concept in two vocabularies, **When** the site is built, **Then** the concept has
    one page, it is listed under both vocabularies, and the build emits no warning about it.
+6. **Given** a page of one vocabulary, or of one of its concepts or collections, **When** a reader
+   looks at the navigation, **Then** no other vocabulary's concepts and collections are listed.
+7. **Given** the generated front page, **When** a reader looks at the navigation, **Then** the
+   front page itself is its first entry.
 
 ---
 
@@ -231,8 +235,8 @@ lists that file's prefixes.
   the build emits no warning.
 - **A collection whose members come from another vocabulary.** It is listed under its own
   vocabulary in the navigation, and its members link to their pages as today.
-- **A vocabulary of thousands of concepts.** The navigation lists them all; how much of the list
-  is shown at once is the theme's.
+- **A vocabulary of thousands of concepts.** The navigation lists them all on that vocabulary's
+  pages; how much of the list is shown at once is the theme's.
 
 ## Requirements *(mandatory)*
 
@@ -247,7 +251,8 @@ lists that file's prefixes.
   patterns, and every other setting the extension adds to a site. Relative vocabulary patterns are
   read from the directory holding `pyproject.toml`. *(US1)*
 - **FR-003**: When the site has no front page of its own, the build MUST write one that carries
-  the site's title and links to every vocabulary and to every prose page of the site's own.
+  the site's title and links to itself, to every vocabulary and to every prose page of the site's
+  own.
   *(US1)*
 - **FR-004**: When a `docs/` directory exists, its pages MUST be part of the site, and its
   `conf.py`, if it has one, MUST be read. A front page of its own MUST NOT be written over.
@@ -294,6 +299,8 @@ lists that file's prefixes.
   contents, in the order the page shows them. *(US3)*
 - **FR-020**: A concept that belongs to several vocabularies MUST be listed under each without a
   build warning. *(US3)*
+- **FR-029**: Below its top-level entries, the navigation MUST open only the branch of the page
+  being read. *(US3)*
 
 **Downloads**
 
@@ -349,7 +356,7 @@ lists that file's prefixes.
 - **SC-003**: In that site, every whole-vocabulary file, in all four formats, parses to a graph
   isomorphic to the vocabulary file it was built from: 100% of them.
 - **SC-004**: In that site, 100% of concepts and collections appear in the navigation beneath
-  their vocabulary.
+  their vocabulary on that vocabulary's pages.
 - **SC-005**: A site built on sphinx-skos 0.3 moves to this version by adding one entry to a table
   of contents and replacing its generated-page `.gitignore` entries with one, and then builds with
   warnings treated as errors.

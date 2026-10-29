@@ -39,7 +39,9 @@ repeating:
 
 Anything about logos, colours, fonts, layout, stylesheets or templates belongs to the site's
 Sphinx theme, not to this package (`CONSTITUTION.md`, Article X). A request for one is answered by
-pointing at Sphinx's theme settings, never by adding an option here.
+pointing at Sphinx's theme settings, never by adding an option here. The two things Article X
+lets through, a site's own title and logo from its settings table and a navigation that opens
+only the current branch, are not precedents for more.
 
 ## Flag conflicts with a recorded decision
 

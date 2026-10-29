@@ -14,6 +14,7 @@ TABLE_SETTINGS = {
     "title": "project",
     "base-uri": "skos_base_uri",
     "vocabularies": "skos_vocabularies",
+    "logo": "html_logo",
     "directory": "skos_directory",
 }
 THEME = "furo"
@@ -74,6 +75,10 @@ class SiteSettings:
     def apply(cls, app: Sphinx, config: Config) -> None:
         """Set the settings the site left unset and choose its default theme.
 
+        A title from the table names the site in the theme too, through
+        ``html_title``, unless the site sets that itself. A logo path is read
+        from the directory of the table's file.
+
         Args:
             app: The Sphinx application building the site.
             config: The site's configuration.
@@ -88,6 +93,10 @@ class SiteSettings:
                 elif not cls.set_by_site(config, name):
                     if key == "vocabularies" and isinstance(value, list):
                         value = [str(directory / str(item)) for item in value]
+                    if key == "logo":
+                        value = str(directory / str(value))
                     setattr(config, name, value)
+                    if key == "title" and not cls.set_by_site(config, "html_title"):
+                        config.html_title = value
         if not cls.set_by_site(config, "html_theme"):
             config.html_theme = THEME

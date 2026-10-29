@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from docutils import nodes
-from rdflib import DCTERMS, OWL, RDFS
+from rdflib import DCTERMS, OWL, RDF, RDFS
 from rdflib.term import BNode, Node, URIRef
 from rdflib.term import Literal as RDFLiteral
 from sphinx import addnodes
@@ -38,8 +38,8 @@ UNLINKED_SCHEMES = ("javascript", "data", "vbscript")
 SCHEME = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*):")
 IGNORED_BY_BROWSERS = re.compile(r"[\x00-\x20]")
 
-type Facts = list[tuple[str, list[list[nodes.Node]]]]
-type Properties = list[tuple[str, URIRef]]
+type Facts = list[tuple[str | nodes.Node, list[list[nodes.Node]]]]
+type Properties = list[URIRef]
 
 
 class ResourceDirective(SphinxDirective):
@@ -86,6 +86,9 @@ class ResourceDirective(SphinxDirective):
         section += nodes.title("", title)
         section["names"].append(nodes.fully_normalize_name(title))
         self.state.document.note_implicit_target(section)
+        section += nodes.paragraph(
+            "", "", nodes.reference(uri, uri, refuri=uri), classes=["skos-uri"]
+        )
         section += self.fields(uri)
         section += self.parse_content_to_nodes()
         return [section]
@@ -97,14 +100,23 @@ class ResourceDirective(SphinxDirective):
             uri: The resource's URI.
 
         Returns:
-            A field list with the URI, then the facts of the resource, then its
-            metadata, then every other property it states. A field is there
-            only where the resource has a value, except the URI, which always
-            is.
+            A field list with the resource's types, then its facts, then its
+            metadata, then every other property it states, then what it
+            lists. A field is there only where the resource has a value.
         """
         subject = URIRef(uri)
+        types = self.vocabularies.statements(subject).get(RDF.type, [])
         field_list = nodes.field_list(
-            "", self.field(translate("URI"), [nodes.Text(uri)])
+            "",
+            self.field(
+                self.name_of(RDF.type),
+                *[
+                    [self.name_of(type_)]
+                    for type_ in sorted(
+                        type_ for type_ in types if isinstance(type_, URIRef)
+                    )
+                ],
+            ),
         )
         facts = [
             *self.facts(uri),
@@ -112,20 +124,43 @@ class ResourceDirective(SphinxDirective):
         ]
         field_list += [self.field(name, *values) for name, values in facts if values]
         shown = (
-            ResourceDirective.shown
+            frozenset({RDF.type})
+            | ResourceDirective.shown
             | self.shown
             | {
-                predicate
-                for _, predicate in (
-                    *self.text_properties(),
-                    *self.metadata_properties(),
-                )
+                *self.text_properties(),
+                *self.metadata_properties(),
             }
         )
         field_list += self.other_fields(subject, shown, frozenset())
+        field_list += [
+            self.field(name, *values) for name, values in self.listings(uri) if values
+        ]
         if self.pages.uri_for(self.env.docname) == uri:
             field_list += self.download_field()
         return field_list
+
+    def listings(self, uri: str) -> Facts:
+        """Return the lists of other resources shown last, before the downloads.
+
+        Args:
+            uri: The resource's URI.
+
+        Returns:
+            The name and the paragraphs of each list. A resource lists none.
+        """
+        return []
+
+    def name_of(self, predicate: URIRef) -> nodes.Node:
+        """Return a field name for a property: its prefixed name, linked to it.
+
+        Args:
+            predicate: The property.
+
+        Returns:
+            A link to the property's URI, showing its prefixed name.
+        """
+        return self.uri_reference(str(predicate), self.vocabularies.curie(predicate))
 
     def download_field(self) -> nodes.field:
         """Return the field that links a generated page's RDF files.
@@ -156,15 +191,15 @@ class ResourceDirective(SphinxDirective):
         vocabularies = self.vocabularies
         return [
             (
-                translate("Preferred labels"),
+                self.name_of(SKOS.prefLabel),
                 self.label_values(vocabularies.labels(uri, "prefLabel")),
             ),
             (
-                translate("Alternative labels"),
+                self.name_of(SKOS.altLabel),
                 self.label_values(vocabularies.labels(uri, "altLabel")),
             ),
             (
-                translate("Definitions"),
+                self.name_of(SKOS.definition),
                 self.label_values(vocabularies.definitions(uri)),
             ),
             *self.property_facts(URIRef(uri), self.text_properties()),
@@ -174,41 +209,41 @@ class ResourceDirective(SphinxDirective):
         """Return the properties that say what a resource is, shown after its labels.
 
         Returns:
-            The name of each field and the property it shows.
+            The property each field shows, in the order shown.
         """
         return [
-            (translate("Titles"), DCTERMS.title),
-            (translate("Descriptions"), DCTERMS.description),
-            (translate("Notations"), SKOS.notation),
-            (translate("Scope notes"), SKOS.scopeNote),
-            (translate("Notes"), SKOS.note),
-            (translate("Examples"), SKOS.example),
-            (translate("History notes"), SKOS.historyNote),
-            (translate("Editorial notes"), SKOS.editorialNote),
-            (translate("Change notes"), SKOS.changeNote),
+            DCTERMS.title,
+            DCTERMS.description,
+            SKOS.notation,
+            SKOS.scopeNote,
+            SKOS.note,
+            SKOS.example,
+            SKOS.historyNote,
+            SKOS.editorialNote,
+            SKOS.changeNote,
         ]
 
     def metadata_properties(self) -> Properties:
         """Return the properties that say who made a resource, when and on what terms.
 
         Returns:
-            The name of each field and the property it shows.
+            The property each field shows, in the order shown.
         """
         return [
-            (translate("Creators"), DCTERMS.creator),
-            (translate("Contributors"), DCTERMS.contributor),
-            (translate("Publishers"), DCTERMS.publisher),
-            (translate("Created"), DCTERMS.created),
-            (translate("Issued"), DCTERMS.issued),
-            (translate("Modified"), DCTERMS.modified),
-            (translate("Version"), OWL.versionInfo),
-            (translate("Licence"), DCTERMS.license),
-            (translate("Rights"), DCTERMS.rights),
-            (translate("Identifiers"), DCTERMS.identifier),
-            (translate("Languages"), DCTERMS.language),
-            (translate("Sources"), DCTERMS.source),
-            (translate("Citations"), DCTERMS.bibliographicCitation),
-            (translate("See also"), RDFS.seeAlso),
+            DCTERMS.creator,
+            DCTERMS.contributor,
+            DCTERMS.publisher,
+            DCTERMS.created,
+            DCTERMS.issued,
+            DCTERMS.modified,
+            OWL.versionInfo,
+            DCTERMS.license,
+            DCTERMS.rights,
+            DCTERMS.identifier,
+            DCTERMS.language,
+            DCTERMS.source,
+            DCTERMS.bibliographicCitation,
+            RDFS.seeAlso,
         ]
 
     def property_facts(self, subject: URIRef, properties: Properties) -> Facts:
@@ -216,15 +251,18 @@ class ResourceDirective(SphinxDirective):
 
         Args:
             subject: The resource's URI.
-            properties: The name of each fact and the property it shows.
+            properties: The property each fact shows.
 
         Returns:
             The name and the paragraphs of each fact.
         """
         statements = self.vocabularies.statements(subject)
         return [
-            (name, self.values(statements.get(predicate, []), frozenset()))
-            for name, predicate in properties
+            (
+                self.name_of(predicate),
+                self.values(statements.get(predicate, []), frozenset()),
+            )
+            for predicate in properties
         ]
 
     def other_fields(
@@ -251,8 +289,7 @@ class ResourceDirective(SphinxDirective):
         )
         return [
             self.field(
-                self.uri_reference(str(predicate), vocabularies.curie(predicate)),
-                *self.values(statements[predicate], seen),
+                self.name_of(predicate), *self.values(statements[predicate], seen)
             )
             for predicate in predicates
         ]
@@ -401,11 +438,16 @@ class ResourceDirective(SphinxDirective):
             For each label its text, followed by its language tag in a text
             node of its own when it has one.
         """
+        site = (self.config.language or "").lower().replace("_", "-")
+        first = sorted(
+            labels,
+            key=lambda label: label.language.lower().replace("_", "-") != site,
+        )
         return [
             [nodes.Text(label.text), nodes.Text(f" ({label.language})")]
             if label.language
             else [nodes.Text(label.text)]
-            for label in labels
+            for label in first
         ]
 
 
@@ -415,19 +457,18 @@ class VocabularyDirective(ResourceDirective):
     kind = "vocabulary"
     shown = frozenset({SKOS.hasTopConcept})
 
-    def facts(self, uri: str) -> Facts:
-        """Add the concepts and collections of the vocabulary.
+    def listings(self, uri: str) -> Facts:
+        """List the concepts, collections and namespace prefixes of the vocabulary.
 
         Args:
             uri: The vocabulary's URI.
 
         Returns:
-            The vocabulary's facts.
+            The vocabulary's lists.
         """
         vocabularies = self.vocabularies
         language = self.config.language
         return [
-            *super().facts(uri),
             (
                 translate("Concepts"),
                 self.links(vocabularies.concepts_in(uri, language)),
@@ -494,40 +535,41 @@ class ConceptDirective(ResourceDirective):
         """
         vocabularies = self.vocabularies
         language = self.config.language
-        mappings = {
-            "exactMatch": translate("Exact match"),
-            "closeMatch": translate("Close match"),
-            "broadMatch": translate("Broad match"),
-            "narrowMatch": translate("Narrow match"),
-            "relatedMatch": translate("Related match"),
-        }
         return [
             *super().facts(uri),
             (
-                translate("Vocabulary"),
+                self.name_of(SKOS.inScheme),
                 self.links(vocabularies.vocabularies_of(uri, language)),
             ),
             (
-                translate("Collections"),
-                self.links(vocabularies.collections_of(uri, language)),
-            ),
-            (
-                translate("Broader"),
+                self.name_of(SKOS.broader),
                 self.links(vocabularies.relations(uri, "broader", language)),
             ),
             (
-                translate("Narrower"),
+                self.name_of(SKOS.narrower),
                 self.links(vocabularies.relations(uri, "narrower", language)),
             ),
             (
-                translate("Related"),
+                self.name_of(SKOS.related),
                 self.links(vocabularies.relations(uri, "related", language)),
             ),
             *[
-                (mappings[name], self.target_links(targets))
+                (self.name_of(SKOS[name]), self.target_links(targets))
                 for name, targets in vocabularies.mappings(uri, language)
             ],
         ]
+
+    def listings(self, uri: str) -> Facts:
+        """List the collections the concept is a member of.
+
+        Args:
+            uri: The concept's URI.
+
+        Returns:
+            The concept's lists.
+        """
+        collections = self.vocabularies.collections_of(uri, self.config.language)
+        return [(translate("Member of"), self.links(collections))]
 
 
 class CollectionDirective(ResourceDirective):
@@ -546,7 +588,9 @@ class CollectionDirective(ResourceDirective):
             The collection's facts.
         """
         members = self.vocabularies.members_of(uri, self.config.language)
-        return [*super().facts(uri), (translate("Members"), self.links(members))]
+        ordered = (URIRef(uri), SKOS.memberList, None) in self.vocabularies.graph
+        name = self.name_of(SKOS.memberList if ordered else SKOS.member)
+        return [*super().facts(uri), (name, self.links(members))]
 
 
 PAGE_BUILDERS = ("html", "dirhtml")

@@ -22,33 +22,45 @@ hidden list of concepts and collections.
 
 ## What is shown
 
-The directive becomes a section titled with the resource, holding a field list. It shows every
-statement the vocabulary files make about the resource except its hidden labels, which are meant
-for search and stay in the [RDF copies](rdf-copies.md) only. A field appears only when the
-resource has a value for it, except the URI, which always appears.
+The directive becomes a section titled with the resource. Under the title is the resource's URI,
+as a link to itself, and then a field list. The fields show every statement the vocabulary files
+make about the resource except its hidden labels, which are meant for search and stay in the
+[RDF copies](rdf-copies.md) only. A field appears only when the resource has a value for it.
+
+A field that shows one property is named by the property's prefixed name, such as
+`skos:prefLabel` or `dcterms:isPartOf`, linked to the property's URI. A property no prefix in the
+files covers is named by its URI. A field that lists other resources, and is not one property,
+is named in words: Concepts, Collections, Namespace prefixes, Member of and Download. Those names
+are translated with the site's `language`.
 
 The fields come in this order:
 
-1. The URI.
-2. The labels and what the resource is: preferred labels, alternative labels, definitions,
-   titles (`dcterms:title`), descriptions (`dcterms:description`), notations, and the scope
-   notes, notes, examples, history notes, editorial notes and change notes.
-3. The fields of the resource's kind, in the table below.
-4. Who made it, when and on what terms: creators, contributors and publishers, the created,
-   issued and modified dates, the version (`owl:versionInfo`), the licence (`dcterms:license`),
-   rights, identifiers, languages, sources, citations (`dcterms:bibliographicCitation`) and
-   `rdfs:seeAlso` links.
-5. Every other property, one field each, sorted by name. Each is named by its prefixed name, such
-   as `dcterms:isPartOf`, linked to the property's URI. A property no prefix in the files covers
-   is named by its URI.
+1. `rdf:type`: the resource's types, each linked by its prefixed name, such as `skos:Concept`.
+2. The labels and what the resource is: `skos:prefLabel`, `skos:altLabel`, `skos:definition`,
+   `dcterms:title`, `dcterms:description`, `skos:notation`, `skos:scopeNote`, `skos:note`,
+   `skos:example`, `skos:historyNote`, `skos:editorialNote` and `skos:changeNote`.
+3. The properties of the resource's kind, in the first table below.
+4. Who made it, when and on what terms: `dcterms:creator`, `dcterms:contributor`,
+   `dcterms:publisher`, `dcterms:created`, `dcterms:issued`, `dcterms:modified`,
+   `owl:versionInfo`, `dcterms:license`, `dcterms:rights`, `dcterms:identifier`,
+   `dcterms:language`, `dcterms:source`, `dcterms:bibliographicCitation` and `rdfs:seeAlso`.
+5. Every other property, one field each, sorted by prefixed name.
+6. The lists of other resources, in the second table below.
 
-| Directive | Fields of its kind, in order |
+| Directive | Properties of its kind, in order |
 |---|---|
-| `skos:concept` | vocabulary, collections, broader, narrower, related, one field for each mapping link the concept has |
-| `skos:vocabulary` | concepts, collections, namespace prefixes |
-| `skos:collection` | members |
+| `skos:concept` | `skos:inScheme`, `skos:broader`, `skos:narrower`, `skos:related`, then one field for each mapping property the concept uses, such as `skos:exactMatch` |
+| `skos:collection` | `skos:memberList` for an ordered collection, `skos:member` for any other |
+
+| Directive | Lists, in order |
+|---|---|
+| `skos:vocabulary` | Concepts, Collections, Namespace prefixes |
+| `skos:concept` | Member of: the collections the concept is a member of |
 
 A generated page ends with one more field, [Download](#download).
+
+Labels and definitions in the site's `language` come first in their field. The others follow
+sorted by language tag and then text, and a label with no language tag sorts first among them.
 
 How a value is shown depends on what it is:
 
@@ -62,8 +74,8 @@ How a value is shown depends on what it is:
 - **A blank node** is shown as a field list of its own statements, nested in the field, as deep
   as the files go.
 
-Within a field, URIs come first, sorted by the text they show, then literals, sorted by language
-and then text, then blank nodes. An ordered collection's members keep the collection's order.
+In any other field, URIs come first, sorted by the text they show, then literals, sorted by
+language and then text, then blank nodes. An ordered collection's members keep the collection's order.
 Every page shows its fields and values in the same order on every build.
 
 ## Namespace prefixes

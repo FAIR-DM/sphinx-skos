@@ -73,9 +73,19 @@ utilities that genuinely share no subject.
 ### Article X — Content, never look and feel
 The extension emits document content (docutils nodes) and RDF copies. It adds no stylesheet,
 script, HTML template, image, static file or theme option. It sets one default, `html_theme =
-"furo"`, for a site that sets no theme itself, and installs Furo for it. Logos, colours, fonts and
-layout are set by the site through Sphinx's theme settings, and a change that adds any of them to
-this package is out of scope however it is asked for.
+"furo"`, for a site that sets no theme itself, and installs Furo for it. Two things pass through
+it without being its own:
+
+- A site's title and logo, written in the `[tool.sphinx-skos]` table, go to Sphinx's
+  `html_title` and `html_logo`, so a site with no `conf.py` can name them. The words and the
+  image are the site's.
+- The navigation opens only the branch of the page being read below its top level, because the
+  generated pages would otherwise list every concept of every vocabulary on every page. The
+  entries are Sphinx's own, and no markup is added to them.
+
+Colours, fonts, layout and every other look-and-feel choice are set by the site through Sphinx's
+theme settings, and a change that adds any of them to this package is out of scope however it is
+asked for.
 
 ### Article XI — Nothing site-specific in the package
 No organisation's URI, name, vocabulary or default appears in the package code. Everything a site
@@ -121,4 +131,4 @@ Read at plan and review. Applies to every change.
 
 ---
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-29
+**Version**: 1.2.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-29

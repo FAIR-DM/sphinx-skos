@@ -325,9 +325,10 @@ builds pass and upload the site.
   `dcterms:issued`, `dcterms:modified`, `owl:versionInfo`, `dcterms:license`, `dcterms:rights`,
   `dcterms:identifier`, `dcterms:language`, `dcterms:source`, `dcterms:bibliographicCitation` and
   `rdfs:seeAlso`. *(US2)*
-- **FR-027**: Every other property a resource states MUST be shown in a field named by its
-  prefixed name, from the prefixes of the vocabulary files, or by its URI where no prefix covers
-  it, and linked to the property's URI. *(US2)*
+- **FR-027**: Every field that shows one property, those of FR-026 and the resource's types
+  included, MUST be named by the property's prefixed name, from the prefixes of the vocabulary
+  files, or by its URI where no prefix covers it, and linked to the property's URI. Every other
+  property a resource states MUST be shown in a field of its own named that way. *(US2)*
 - **FR-028**: A URI value MUST be shown as a link, by its page's title when it has a page,
   else by the name the files give it with `skos:prefLabel`, `foaf:name`, `schema:name`,
   `rdfs:label` or `dcterms:title`, else by the URI. A literal MUST be shown with its language
@@ -337,7 +338,8 @@ builds pass and upload the site.
   any other URI MUST go to the URI itself, without a warning. *(US2)*
 - **FR-015**: A page's title MUST be the resource's preferred label in the site's `language`, or,
   failing that, a preferred label chosen the same way on every build, or, failing that, its URI.
-  Every order on a page that the vocabulary does not fix MUST be the same on every build. *(US2)*
+  Labels and definitions in the site's `language` MUST come first in their field. Every order on
+  a page that the vocabulary does not fix MUST be the same on every build. *(US2)*
 - **FR-016**: Text from a vocabulary file MUST reach a page only as document content that the
   HTML writer escapes. *(US2)*
 

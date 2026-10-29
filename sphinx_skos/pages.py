@@ -269,23 +269,23 @@ class GeneratedPages:
         Returns:
             The directive, or an empty string if there is nothing to list.
         """
-        return self.toctree_of([self.docnames[uri] for uri in uris], option)
+        return self.toctree_of([f"/{self.docnames[uri]}" for uri in uris], option)
 
     @staticmethod
-    def toctree_of(docnames: Iterable[str], option: str) -> str:
+    def toctree_of(entries: Iterable[str], option: str) -> str:
         """Return a ``toctree`` directive listing documents.
 
         Args:
-            docnames: The documents to list, in order.
+            entries: The entries to list, in order, such as ``/vocabularies/index``.
             option: The directive option line, such as ``:maxdepth: 1``.
 
         Returns:
             The directive, or an empty string if there is nothing to list.
         """
-        entries = "".join(f"   /{docname}\n" for docname in docnames)
-        if not entries:
+        lines = "".join(f"   {entry}\n" for entry in entries)
+        if not lines:
             return ""
-        return f"\n.. toctree::\n   {option}\n\n{entries}"
+        return f"\n.. toctree::\n   {option}\n\n{lines}"
 
     def index_text(self) -> str:
         """Return the source of the index page.
@@ -316,12 +316,17 @@ class GeneratedPages:
 
         Returns:
             The marker line, the site's ``project`` as the title and a list of
-            the index and then every document of the site's own, by name.
+            the front page itself, the index and then every document of the
+            site's own, by name.
         """
         title = escape(" ".join(self.project.split()))
         listed = [self.index_docname] if self.index_docname else []
+        entries = [
+            f"{translate('Home')} <self>",
+            *(f"/{docname}" for docname in [*listed, *self.site_documents]),
+        ]
         return f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n" + self.toctree_of(
-            [*listed, *self.site_documents], ":maxdepth: 1"
+            entries, ":maxdepth: 1"
         )
 
     def write(self, srcdir: str | Path) -> None:

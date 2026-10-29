@@ -6,12 +6,13 @@ and what a pull request needs.
 ## Before you open an issue
 
 `sphinx-skos` renders the content of SKOS vocabularies. It does not control how a site looks.
-Logos, colours, fonts and layout come from the Sphinx theme a site chooses, set in its `conf.py`
-with `html_theme`, `html_logo` and `html_theme_options`. See Sphinx's
-[HTML theming documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
+Colours, fonts and layout come from the Sphinx theme a site chooses, set in its `conf.py`
+with `html_theme` and `html_theme_options`. See Sphinx's
+[HTML theming documentation](https://www.sphinx-doc.org/en/master/usage/theming.html). A site's
+own title and logo can be named in its `[tool.sphinx-skos]` table, which passes them to Sphinx.
 
-Issues and pull requests asking this package for a logo, a colour scheme, a stylesheet, a
-template or a layout option are closed with a pointer here. That is a standing decision, recorded
+Issues and pull requests asking this package for a logo of its own, a colour scheme, a
+stylesheet, a template or a layout option are closed with a pointer here. That is a standing decision, recorded
 in the README's *Scope & philosophy* section and in `CONSTITUTION.md` (Article X).
 
 Equally out of scope: editing or validating vocabularies, and serving pages. The README explains
