@@ -10,6 +10,7 @@ from sphinx.environment import BuildEnvironment
 from sphinx.project import Project
 from sphinx.util.typing import ExtensionMetadata
 
+from sphinx_skos.book import BookLayout
 from sphinx_skos.copies import RdfCopies
 from sphinx_skos.domain import SKOSDomain
 from sphinx_skos.pages import GeneratedPages
@@ -108,8 +109,10 @@ def find_outdated(
 
     A page's text names only its resource, so Sphinx cannot see that a
     vocabulary file changed, or that another version of the extension would
-    render it differently. The fingerprint of the files and the extension's
-    version are kept with the environment and compared on every build.
+    render it differently. Nor can it see that the site gained or lost the
+    ready-made layout, which adds the vocabularies to the root document. The
+    fingerprint of the files, the extension's version and whether the layout
+    applies are kept with the environment and compared on every build.
 
     Args:
         app: The Sphinx application building the site.
@@ -119,18 +122,22 @@ def find_outdated(
         removed: The documents Sphinx found removed.
 
     Returns:
-        Every document of the site if the fingerprint or the version differs
-        from the last build's, otherwise none.
+        Every document of the site if the fingerprint, the version or the
+        layout differs from the last build's, otherwise none.
     """
     domain = cast(SKOSDomain, env.domains["skos"])
     fingerprint = domain.vocabularies.fingerprint
-    if (domain.data["fingerprint"], domain.data.get("version")) == (
-        fingerprint,
-        __version__,
-    ):
+    layout = BookLayout.applies(app.config)
+    last = (
+        domain.data["fingerprint"],
+        domain.data.get("version"),
+        domain.data.get("layout"),
+    )
+    if last == (fingerprint, __version__, layout):
         return []
     domain.data["fingerprint"] = fingerprint
     domain.data["version"] = __version__
+    domain.data["layout"] = layout
     return sorted(env.found_docs)
 
 
@@ -138,7 +145,8 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     """Register the extension with Sphinx.
 
     Registers the ``skos_vocabularies`` and ``skos_base_uri`` settings, the
-    ``skos`` domain and the handlers that write the pages and their RDF copies.
+    ``skos`` domain, the handlers that write the pages and their RDF copies,
+    and the ready-made layout of the ``book`` extra.
 
     Args:
         app: The Sphinx application building the site.
@@ -149,6 +157,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_config_value("skos_vocabularies", [], "env", types=[list])
     app.add_config_value("skos_base_uri", "", "env", types=[str])
     app.add_domain(SKOSDomain)
+    app.connect("config-inited", BookLayout.configure)
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)

@@ -9,7 +9,8 @@
 **Goals**: G1, G2, G3, G4, G7, G8 (see [`GOALS.md`](../../GOALS.md)). It must also hold to G5 and
 G6, which every feature serves.
 
-**Input**: Issue #4, "Build a documentation site from SKOS vocabulary files".
+**Input**: Issue #4, "Build a documentation site from SKOS vocabulary files". User Story 6:
+issue #20, "Ship a ready-made site layout with sphinx-book-theme as an optional extra".
 
 ## Summary
 
@@ -18,8 +19,9 @@ A site maintainer lists their vocabulary files and their base URI in `conf.py`, 
 collection in those files. Each page sits at its resource's URI with the base URI removed, and
 has the resource's own RDF beside it in Turtle, JSON-LD, RDF/XML and N-Triples, named from the
 page itself. The directives that build the generated pages can also be written by hand in the
-site's own prose pages. Nothing about how the site looks comes from this package: the pages are
-ordinary Sphinx documents and take their look from the site's theme.
+site's own prose pages. The pages are ordinary Sphinx documents and take their look from the
+site's theme. A site that installs the `book` extra and chooses no theme gets one ready-made
+layout, which every setting in its `conf.py` overrides.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -254,6 +256,51 @@ builds pass and upload the site.
 
 ---
 
+### User Story 6 - A site maintainer gets a finished site by installing the `book` extra (Priority: P3)
+
+A site maintainer installs `sphinx-skos[book]` and sets no `html_theme`. The site is built with
+sphinx-book-theme, laid out for a vocabulary site: the left sidebar lists every vocabulary and the
+site's own top-level pages on every page, the top bar has no search button because the sidebar has
+a search field, there is no right-hand sidebar and the article takes the width it leaves, and a
+generated page's download menu offers its resource's RDF copies instead of the page source. Any
+setting the maintainer makes in `conf.py` wins over these defaults, and a site that sets its own
+`html_theme` gets none of them.
+
+**Why this priority**: A vocabulary site that wants a finished look would otherwise need a theme,
+several theme settings, a stylesheet and a hook of its own. Every site still works without it.
+
+**Independent Test**: Build a test site with sphinx-book-theme installed and no `html_theme`, and
+check the sidebar's links, the absence of a right-hand sidebar and the download menu's links in
+the built HTML. Build it again with `html_theme` set and check that none of it is there.
+
+**Acceptance Scenarios**:
+
+1. **Given** sphinx-book-theme is installed and the site sets no `html_theme`, **When** the site
+   is built, **Then** it is built with sphinx-book-theme and emits no warnings.
+2. **Given** that site, **When** a reader opens any page, generated or the site's own, **Then**
+   the left sidebar links to every vocabulary's page and to every page the site's root document
+   lists in its table of contents.
+3. **Given** a vocabulary the site's root document already lists in its table of contents,
+   **When** the site is built, **Then** the sidebar links to it once.
+4. **Given** that site, **When** a reader opens any page, **Then** the page has no right-hand
+   sidebar.
+5. **Given** a generated page, **When** a reader opens its download menu, **Then** it links to
+   the resource's RDF copies in Turtle, JSON-LD, RDF/XML and N-Triples, and not to the page's
+   source.
+6. **Given** a page of the site's own, **When** a reader opens its download menu, **Then** it
+   still offers the page's source.
+7. **Given** the site sets a theme option in `html_theme_options`, such as the right-hand sidebar's
+   items, **When** the site is built, **Then** the site's value is used.
+8. **Given** the site sets `html_theme`, to sphinx-book-theme or any other theme, **When** the site
+   is built, **Then** none of these defaults apply: the sidebar lists only what the site's tables of
+   contents list, the download menu is the theme's own and the extension adds no stylesheet.
+9. **Given** sphinx-book-theme is not installed, **When** the site is built, **Then** it is built
+   as it would be without the extra.
+10. **Given** a site built before sphinx-book-theme was installed, **When** it is installed and the
+    site is built again without a clean, **Then** the output matches a clean build.
+
+---
+
 ### Edge Cases
 
 - A resource outside the base URI is still shown on the pages that refer to it, linked to its URI
@@ -362,9 +409,27 @@ builds pass and upload the site.
 
 **Look and feel**
 
-- **FR-024**: The extension MUST add no stylesheet, script, HTML template, image, static file or
-  theme option, and its pages MUST build without warnings under any Sphinx HTML theme.
-  *(US1, US2)*
+- **FR-024**: Outside the ready-made layout of FR-031, the extension MUST add no stylesheet,
+  script, HTML template, image, static file or theme option, and its pages MUST build without
+  warnings under any Sphinx HTML theme. *(US1, US2)*
+
+**Ready-made layout**
+
+- **FR-031**: The package MUST offer a `book` extra that installs sphinx-book-theme. When
+  sphinx-book-theme can be imported and the site sets no `html_theme` in `conf.py` or on the
+  command line, the extension MUST set `html_theme` to `sphinx_book_theme` and apply FR-032 to
+  FR-034. Otherwise it MUST apply none of them. *(US6)*
+- **FR-032**: The root document's table of contents MUST gain a hidden entry for every vocabulary
+  with a page that it does not already list, so the theme's sidebar links to every vocabulary on
+  every page. *(US6)*
+- **FR-033**: `html_theme_options` MUST default to no right-hand sidebar items, with every key the
+  site sets keeping the site's value. One stylesheet MUST let the article take the width when a
+  page has no right-hand sidebar, hide that sidebar's toggle when there is nothing to toggle, and
+  hide the top bar's search button. It MUST add nothing else. *(US6)*
+- **FR-034**: A generated page's download menu MUST link to its four RDF copies in place of the
+  page source. A page of the site's own keeps the theme's menu. *(US6)*
+- **FR-035**: Whether FR-031 applies MUST be part of what decides that every document is read
+  again, so a rebuild after installing or removing sphinx-book-theme matches a clean build. *(US6)*
 
 **Publishing to GitHub Pages**
 
@@ -427,4 +492,5 @@ builds pass and upload the site.
 - Linking to a resource from a prose page with a cross-reference role, an index of all
   vocabularies, and search are out of scope.
 - Releasing the package is out of scope.
-- Look and feel is out of scope permanently (G6, constitution Article X).
+- Look and feel is out of scope, apart from the one optional layout of User Story 6 (G6,
+  constitution Article X).

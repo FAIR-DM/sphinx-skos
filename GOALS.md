@@ -21,7 +21,7 @@ Importance is a tag on each goal, not a ranking:
 | G3 | A page's address is its URI with the base URI removed, so a redirect from a resource's URI reaches its page with no lookup table | Essential | | |
 | G4 | A concept page shows what a reader needs to use the concept: its labels in every language, definition, notation, the collections it is in and its mapping links | Essential | | |
 | G5 | Any organisation can publish its vocabularies with it, with everything site-specific set in the site's `conf.py` | Essential | | |
-| G6 | A site's look and feel comes entirely from its Sphinx theme, and the extension works under any theme | Essential | | Requests for logos, colours or layout options are answered by Sphinx's theme settings, not by this package |
+| G6 | A site's look and feel comes from its Sphinx theme, and the extension works under any theme. A site that installs the `book` extra and sets no theme gets one ready-made layout, which its own settings override | Essential | | Requests for logos, colours or layout options are answered by Sphinx's theme settings, not by this package. The `book` extra's layout is the one exception, and stays a set of defaults for sphinx-book-theme |
 | G7 | Software can find a page's RDF copies from the page itself | Expected | | |
 | G8 | The directives that build the generated pages can be used by hand in a site's prose pages | Expected | | |
 

@@ -1,0 +1,26 @@
+@base <https://example.org/vocab/> .
+@prefix bibo: <http://purl.org/ontology/bibo/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<methods> a skos:ConceptScheme ;
+    skos:prefLabel "Methods"@en .
+
+<instruments> a skos:ConceptScheme ;
+    skos:prefLabel "Instruments"@en .
+
+<methods/survey> a skos:Concept ;
+    skos:inScheme <methods> ;
+    skos:prefLabel "Survey"@en .
+
+<methods/loose> a skos:Concept ;
+    skos:prefLabel "Loose"@en .
+
+<date-types/created> skos:altLabel "Made"@en ;
+    skos:definition "The date the resource was made."@en .
+
+<references/smith-2020> a bibo:Document ;
+    skos:prefLabel "Smith 2020"@en .
+
+<methods/markup> a skos:Concept ;
+    skos:inScheme <methods> ;
+    skos:prefLabel "</title><b>&amp;</b>"@en .

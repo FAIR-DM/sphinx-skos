@@ -5,8 +5,8 @@
 A Sphinx extension that builds SKOS vocabularies into a documentation site: one page per
 vocabulary, concept and collection, each with RDF copies beside it. The vocabulary is pinned in
 `CONTEXT.md`, the goals and intended design are in `GOALS.md`, and the rules are in
-`CONSTITUTION.md`. It renders content only: look and feel is the site's Sphinx theme
-(Article X).
+`CONSTITUTION.md`. It renders content only: look and feel is the site's Sphinx theme,
+apart from the optional ready-made layout of the `book` extra (Article X).
 
 ## Stack & commands
 

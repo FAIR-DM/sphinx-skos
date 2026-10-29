@@ -16,3 +16,4 @@ def setup(app):
     with (here / "locale/de/LC_MESSAGES/sphinx_skos.mo").open("wb") as mo:
         write_mo(mo, catalog)
     app.add_message_catalog("sphinx_skos", str(here / "locale"))
+html_theme = "basic"

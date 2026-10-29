@@ -169,6 +169,8 @@ code to make a test pass.
   their addresses, and the RDF in the RDF copies, compared as graphs rather than as text. A page's
   fixed wording is never asserted.
 - **A build that should be clean is asserted clean**: `app.warning.getvalue() == ""`.
+- **A test site sets `html_theme = "basic"`** unless it tests the ready-made layout of the `book`
+  extra, so what it builds does not depend on whether sphinx-book-theme is installed.
 - **Test sites use example URIs** (`https://example.org/...`), never a real organisation's.
 
 ---

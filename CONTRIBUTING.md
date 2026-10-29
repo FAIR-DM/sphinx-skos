@@ -9,6 +9,8 @@ and what a pull request needs.
 Logos, colours, fonts and layout come from the Sphinx theme a site chooses, set in its `conf.py`
 with `html_theme`, `html_logo` and `html_theme_options`. See Sphinx's
 [HTML theming documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
+The one exception is the optional ready-made layout of the `book` extra, a set of defaults for
+sphinx-book-theme that every site setting overrides.
 
 Issues and pull requests asking this package for a logo, a colour scheme, a stylesheet, a
 template or a layout option are closed with a pointer here. That is a standing decision, recorded

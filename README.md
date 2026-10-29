@@ -58,6 +58,17 @@ files written beside each page and
 [Settings](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/reference/settings.md) for what
 each setting accepts.
 
+For a finished site without choosing and configuring a theme, install the `book` extra and leave
+`html_theme` unset:
+
+```console
+pip install "sphinx-skos[book]"
+```
+
+The site is built with sphinx-book-theme, with every vocabulary in the sidebar and each page's
+RDF copies in its download menu. See [Give a site a ready-made
+layout](https://github.com/FAIR-DM/sphinx-skos/blob/main/docs/how-to/give-a-site-a-ready-made-layout.md).
+
 To publish the site to GitHub Pages, call the workflow this repository ships from a job in your
 own:
 
@@ -85,8 +96,11 @@ any vocabulary from any organisation.
 
 - **Not a theme.** Logos, colours, fonts and layout come from Sphinx's own theme settings in your
   `conf.py`: `html_theme`, `html_logo`, `html_theme_options` and the rest. The extension renders
-  content only. Requests to add a logo, a colour scheme or a layout option to this package will
-  be closed with a pointer to [Sphinx's HTML theming
+  content, with one optional exception: install `sphinx-skos[book]` and set no `html_theme`, and
+  the site gets a ready-made layout built on
+  [sphinx-book-theme](https://sphinx-book-theme.readthedocs.io/), which every setting in your
+  `conf.py` overrides. Requests to add a logo, a colour scheme or a layout option to this package
+  will be closed with a pointer to [Sphinx's HTML theming
   documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
 - **Not a vocabulary editor.** The Turtle files are the source. The extension reads them and
   never writes them back.

@@ -6,6 +6,21 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A `book` extra. Installed as `sphinx-skos[book]`, it brings
+  [sphinx-book-theme](https://sphinx-book-theme.readthedocs.io/), and a site that sets no
+  `html_theme` is built with it, laid out for a vocabulary site: every vocabulary in the left
+  sidebar on every page, no search button in the top bar, no right-hand sidebar with the article
+  taking its width, and a generated page's RDF copies in its download menu in place of the page
+  source. Every setting in `conf.py` wins over these defaults, and a site that sets `html_theme`
+  gets none of them. Without the extra nothing changes.
+
+### Fixed
+
+- A rebuild after a resource is removed deletes its page's copied source under a theme that
+  changes `html_sourcelink_suffix`, such as sphinx-book-theme.
+
 ## [v0.3.3] - 2026-10-29
 
 ### Fixed

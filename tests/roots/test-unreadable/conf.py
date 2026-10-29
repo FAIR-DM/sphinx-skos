@@ -5,3 +5,4 @@ skos_vocabularies = [
     "vocabularies/absent-*.ttl",
 ]
 skos_base_uri = "https://example.org/vocab/"
+html_theme = "basic"

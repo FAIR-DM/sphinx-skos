@@ -70,11 +70,19 @@ utilities that genuinely share no subject.
 
 ## Project articles
 
-### Article X — Content, never look and feel
-The extension emits document content (docutils nodes) and RDF copies. It adds no stylesheet,
-script, HTML template, image, static file or theme option. Logos, colours, fonts and layout are
-set by the site through Sphinx's theme settings, and a change that adds any of them to this
-package is out of scope however it is asked for.
+### Article X — Content, and one optional layout
+The extension emits document content (docutils nodes) and RDF copies. Its one exception is the
+ready-made layout of the `book` extra: when sphinx-book-theme is installed and a site sets no
+`html_theme`, the extension chooses that theme and sets defaults for it. Those defaults are theme
+options, entries in the root document's table of contents, changes to the template context and
+one stylesheet, each the least that gives a vocabulary site its layout. Every setting the site
+makes in `conf.py` wins over them, and a site that sets `html_theme` gets none of them.
+
+Beyond that layout the extension adds no stylesheet, script, HTML template, image, static file or
+theme option. Logos, colours, fonts and layout are set by the site through Sphinx's theme
+settings, and a change that adds any of them to this package is out of scope however it is asked
+for. A change to the layout keeps it a set of defaults for sphinx-book-theme, never a theme of its
+own.
 
 ### Article XI — Nothing site-specific in the package
 No organisation's URI, name, vocabulary or default appears in the package code. Everything a site
@@ -119,4 +127,4 @@ Read at plan and review. Applies to every change.
 
 ---
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-28
+**Version**: 1.1.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-29

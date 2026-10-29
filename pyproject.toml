@@ -27,6 +27,9 @@ dependencies = [
     "sphinx>=9.0",
 ]
 
+[project.optional-dependencies]
+book = ["sphinx-book-theme>=1.4.0"]
+
 [project.urls]
 homepage = "https://github.com/FAIR-DM/sphinx-skos"
 repository = "https://github.com/FAIR-DM/sphinx-skos"
@@ -43,6 +46,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.22",
+    "sphinx-book-theme>=1.4.0",
     "types-docutils>=0.23.0.20260923",
 ]
 
@@ -80,6 +84,11 @@ files = ["sphinx_skos"]
 warn_return_any = true
 warn_unused_ignores = true
 show_error_codes = true
+
+[[tool.mypy.overrides]]
+# The optional theme of the book extra ships no type information.
+module = ["sphinx_book_theme"]
+ignore_missing_imports = true
 
 [tool.deptry]
 extend_exclude = ["tests/", "docs/"]

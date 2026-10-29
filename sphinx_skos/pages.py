@@ -268,14 +268,15 @@ class GeneratedPages:
         """
         if not isinstance(builder, StandaloneHTMLBuilder):
             return
-        copied = docname + (self.suffix or "")
-        if self.suffix != builder.config.html_sourcelink_suffix:
-            copied += builder.config.html_sourcelink_suffix
+        # A theme may change html_sourcelink_suffix after this runs, as
+        # sphinx-book-theme does, so the source copy is removed by either name.
+        source = Path(builder.outdir) / "_sources" / (docname + (self.suffix or ""))
         outfile = builder.get_outfilename(docname)
         for path in (
             Path(outfile),
             *RdfCopies.paths(outfile),
-            Path(builder.outdir) / "_sources" / copied,
+            source,
+            source.with_name(source.name + builder.config.html_sourcelink_suffix),
         ):
             path.unlink(missing_ok=True)
             self.prune(path.parent, Path(builder.outdir))

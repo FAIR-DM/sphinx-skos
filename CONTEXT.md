@@ -68,4 +68,9 @@ A link from a concept to a concept in another vocabulary: `skos:exactMatch`, `sk
 `skos:broadMatch`, `skos:narrowMatch` or `skos:relatedMatch`. _Avoid_: crosswalk, alignment.
 
 **Look and feel**
-Logos, colours, fonts and layout. Set by the site's Sphinx theme, never by this extension.
+Logos, colours, fonts and layout. Set by the site's Sphinx theme. The extension sets any of it
+only in the ready-made layout, and only as defaults.
+
+**Ready-made layout**
+The defaults the extension sets for sphinx-book-theme when a site installs the `book` extra and
+sets no `html_theme`. _Avoid_: skin, and "book theme" on its own, which is the upstream theme.

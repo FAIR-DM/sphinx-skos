@@ -12,8 +12,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
 ## Module `sphinx_skos`
 
 `setup(app)`
-: Registers the two settings, the `skos` domain and the build handlers. Sphinx calls it when the
-  site lists `sphinx_skos` in `extensions`.
+: Registers the two settings, the `skos` domain, the build handlers and
+  `BookLayout.configure`. Sphinx calls it when the site lists `sphinx_skos` in `extensions`.
 
 `generate_pages(app)`
 : Connected to Sphinx's `builder-inited` event. Loads the vocabulary files into a `Vocabularies`,
@@ -22,9 +22,10 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `find_outdated(app, env, added, changed, removed)`
 : Connected to Sphinx's `env-get-outdated` event. When the fingerprint of the vocabulary files,
-  or the extension's version, differs from the one the environment was last read with, it stores
-  the new one and names every document of the site as outdated, so a rebuild gives what a clean
-  build gives, including after the extension is upgraded.
+  the extension's version, or whether `BookLayout.applies`, differs from the one the environment
+  was last read with, it stores the new one and names every document of the site as outdated, so
+  a rebuild gives what a clean build gives, including after the extension is upgraded or
+  sphinx-book-theme is installed.
 
 `write_copies(app, pagename, templatename, context, doctree)`
 : Connected to Sphinx's `html-page-context` event. For a page the extension generated, under a
@@ -114,8 +115,24 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `SKOSDomain`
 : The `skos` domain. It holds the three directives, and the `vocabularies` and `pages` of the
-  build in progress, and the `fingerprint` of the vocabulary files and the extension `version` the
-  environment was last read with in its `data`.
+  build in progress, and the `fingerprint` of the vocabulary files, the extension `version` and
+  whether the ready-made `layout` applied, as the environment was last read, in its `data`.
+
+## Module `sphinx_skos.book`
+
+`BookLayout`
+: The [ready-made layout](../how-to/give-a-site-a-ready-made-layout.md) of the `book` extra.
+  `applies(config)` says whether a site gets it: sphinx-book-theme can be imported and neither
+  `conf.py` nor the command line sets `html_theme`. `configure(app, config)`, connected to
+  Sphinx's `config-inited` event, sets `html_theme` to `theme`, adds an empty
+  `secondary_sidebar_items` to `html_theme_options` unless the site sets it, adds `stylesheet`
+  from `static_dir` and connects the three handlers below, all only when `applies` is true.
+  `list_vocabularies(app, doctree)` adds a hidden `toctree` of every vocabulary the root document
+  does not already list to the end of the root document. `offer_copies(app, pagename,
+  templatename, context, doctree)` puts a generated page's RDF copies in place of the page source
+  in sphinx-book-theme's download menu. `escape_title(app, pagename, templatename, context,
+  doctree)` escapes the page title that sphinx-book-theme writes into the page unescaped, so a
+  label holding markup reaches the page as text.
 
 ## Module `sphinx_skos.directives`
 

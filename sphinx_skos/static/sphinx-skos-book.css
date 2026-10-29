@@ -1,0 +1,17 @@
+/* Added only for a site that gets the ready-made layout of the book extra. */
+
+/* sphinx-book-theme keeps the article narrow to leave room for the right-hand
+   sidebar. On a page without one, the article takes the width. */
+.bd-main .bd-content:not(:has(.bd-sidebar-secondary)) .bd-article-container {
+  max-width: none;
+}
+
+/* The right-hand sidebar's toggle has nothing to open on such a page. */
+.bd-main:not(:has(.bd-sidebar-secondary)) .secondary-toggle {
+  display: none;
+}
+
+/* The sidebar has a search field, so the top bar needs no search button. */
+.bd-header-article .search-button {
+  display: none;
+}
