@@ -12,6 +12,12 @@ type MakeApp = Callable[..., SphinxTestApp]
 
 BASE = "https://example.org/vocab/"
 SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
+# The files that state something about each vocabulary of the test site.
+VOCABULARY_FILES = {
+    "date-types": ["dates", "methods"],
+    "methods": ["methods"],
+    "instruments": ["methods"],
+}
 ADDRESSES = [
     "date-types",
     "date-types/available",
@@ -97,6 +103,23 @@ def read_copy(app: SphinxTestApp, address: str, suffix: str) -> Graph:
     """Parse a page's copy in one format."""
     graph = Graph()
     graph.parse(copy_file(app, address, suffix), format=FORMATS[suffix])
+    return graph
+
+
+def read_whole(app: SphinxTestApp, address: str, suffix: str) -> Graph:
+    """Parse a vocabulary's whole file in one format."""
+    graph = Graph()
+    graph.parse(
+        Path(app.outdir) / "vocabularies" / f"{address}{suffix}", format=FORMATS[suffix]
+    )
+    return graph
+
+
+def read_vocabulary_files(rootdir: Path, names: list[str]) -> Graph:
+    """Read some of the test site's vocabulary files into one graph."""
+    graph = Graph()
+    for name in names:
+        graph.parse(rootdir / "test-vocabularies" / "data" / f"{name}.ttl")
     return graph
 
 
@@ -241,6 +264,100 @@ class TestRdfCopies:
         ).exists()
 
 
+class TestWholeVocabularyFiles:
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_every_vocabulary_has_four_whole_files_beside_its_directory(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        for address in VOCABULARY_FILES:
+            for suffix in FORMATS:
+                assert (
+                    Path(app.outdir) / "vocabularies" / f"{address}{suffix}"
+                ).is_file()
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_whole_file_is_the_graph_of_the_files_that_state_the_vocabulary(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        app.build()
+
+        for address, names in VOCABULARY_FILES.items():
+            expected = read_vocabulary_files(rootdir, names)
+            for suffix in FORMATS:
+                assert isomorphic(expected, read_whole(app, address, suffix))
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_concept_and_a_collection_have_no_whole_file(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        outdir = Path(app.outdir) / "vocabularies"
+        for address in [
+            "date-types/available",
+            "date-types/by-origin",
+            "methods/loose",
+        ]:
+            for suffix in FORMATS:
+                assert not (outdir / f"{address}{suffix}").exists()
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_vocabularys_own_copy_and_alternate_links_stay_its_own_rdf(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        app.build()
+        files = read_files(rootdir)
+
+        expected = expected_own_rdf(files, BASE + "date-types")
+        for suffix in FORMATS:
+            own = read_copy(app, "date-types", suffix)
+            assert isomorphic(expected, own)
+            assert len(read_whole(app, "date-types", suffix)) > len(own)
+        page = Path(app.builder.get_outfilename("vocabularies/date-types"))
+        assert {link["href"] for link in alternate_links(page)} == {
+            f"index{suffix}" for suffix in FORMATS
+        }
+
+    @pytest.mark.sphinx("html", testroot="vocabularies")
+    def test_under_html_the_file_at_the_whole_files_address_is_the_own_copy(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        app.build()
+        files = read_files(rootdir)
+
+        expected = expected_own_rdf(files, BASE + "date-types")
+        for suffix in FORMATS:
+            assert isomorphic(expected, read_whole(app, "date-types", suffix))
+
+    def test_a_vocabulary_removed_from_the_files_loses_its_whole_files(
+        self, make_app: MakeApp, rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+        app = make_app("dirhtml", srcdir=site)
+        app.build()
+        outdir = Path(app.outdir) / "vocabularies"
+        assert (outdir / "instruments.ttl").is_file()
+        path = site / "data" / "methods.ttl"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                '<instruments> a skos:ConceptScheme ;\n    skos:prefLabel "Instruments"@en .\n',
+                "",
+            ),
+            encoding="utf-8",
+        )
+
+        rebuilt = make_app("dirhtml", srcdir=site)
+        rebuilt.build()
+
+        for suffix in FORMATS:
+            assert not (outdir / f"instruments{suffix}").exists()
+            assert (outdir / f"methods{suffix}").is_file()
+
+
 class TestAlternateLinks:
     @pytest.mark.parametrize("theme", ["alabaster", "furo"])
     def test_every_generated_page_names_each_copy_in_its_head(
@@ -293,7 +410,7 @@ class TestAlternateLinks:
             names.append(copy_names(Path(app.outdir)))
 
         assert names[0] == names[1]
-        assert len(names[0]) == len(ADDRESSES) * len(FORMATS)
+        assert len(names[0]) == (len(ADDRESSES) + len(VOCABULARY_FILES)) * len(FORMATS)
 
 
 class TestRelativeIris:

@@ -374,6 +374,8 @@ class GeneratedPages:
     def remove_output(self, docname: str, builder: Builder) -> None:
         """Delete what an HTML builder wrote for a document that is gone.
 
+        Under ``dirhtml`` that includes the whole-vocabulary files.
+
         Args:
             docname: The removed document.
             builder: The builder of the current build.
@@ -384,9 +386,11 @@ class GeneratedPages:
         if self.suffix != builder.config.html_sourcelink_suffix:
             copied += builder.config.html_sourcelink_suffix
         outfile = builder.get_outfilename(docname)
+        whole = RdfCopies.whole_paths(builder.outdir, docname)
         for path in (
             Path(outfile),
             *RdfCopies.paths(outfile),
+            *(whole if builder.name == "dirhtml" else []),
             Path(builder.outdir) / "_sources" / copied,
         ):
             path.unlink(missing_ok=True)

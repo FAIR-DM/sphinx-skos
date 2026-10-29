@@ -29,7 +29,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
 `write_copies(app, pagename, templatename, context, doctree)`
 : Connected to Sphinx's `html-page-context` event. For a page the extension generated, under a
   builder that writes HTML, it writes the page's [RDF copies](rdf-copies.md) and adds an
-  `<link rel="alternate">` element for each to the page's `metatags`. Other pages are left alone.
+  `<link rel="alternate">` element for each to the page's `metatags`. Under `dirhtml` a
+  vocabulary's page also gets its whole-vocabulary files. Other pages are left alone.
 
 `find_site_documents(app)`
 : The names of the site's own documents: every document in the source directory whose file does
@@ -108,7 +109,7 @@ warnings take part in Sphinx's warning handling, including `-W`.
   `index_text()` gives the source of the index page, at `index_docname`, that lists every
   vocabulary and, hidden, the concepts and collections no vocabulary lists. `write(srcdir)` writes the page sources and the index, each through `write_source(srcdir, docname, text, subject)`, which leaves a file of the site's own alone. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
-  their output file, RDF copies and copied source. `uri_for(docname)` gives the resource a
+  their output file, RDF copies, whole-vocabulary files (under `dirhtml`) and copied source. `uri_for(docname)` gives the resource a
   generated document is the page of, or `None`; its `uris` attribute holds them all.
 
 ## Module `sphinx_skos.copies`
@@ -117,7 +118,9 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : Writes the [RDF copies](rdf-copies.md) of a page. `write(uri, outfile)` serialises a resource's
   own RDF in every format beside the page's output file, `paths(outfile)` says where the copies
   of a page are and `alternate_links(outfile)` gives the `<link rel="alternate">` elements that
-  name them.
+  name them. `whole_paths(outdir, docname)` says where a vocabulary's whole files are and
+  `write_whole(uri, outdir, docname, language)` writes the graph of the vocabulary's files
+  there.
 
 `CopyFormat`, `COPY_FORMATS`
 : A format a copy is written in: `suffix`, `rdflib_format` and `media_type`. `COPY_FORMATS` lists

@@ -76,6 +76,7 @@ def write_copies(
 ) -> None:
     """Write the RDF copies of a generated page and name them in its head.
 
+    Under ``dirhtml`` a vocabulary's page also gets its whole-vocabulary files.
     Pages the extension did not generate, and builders that do not write HTML,
     are left alone.
 
@@ -93,7 +94,13 @@ def write_copies(
     if uri is None:
         return
     outfile = cast(StandaloneHTMLBuilder, app.builder).get_outfilename(pagename)
-    RdfCopies(domain.vocabularies).write(uri, outfile)
+    copies = RdfCopies(domain.vocabularies)
+    copies.write(uri, outfile)
+    if (
+        app.builder.name == "dirhtml"
+        and domain.vocabularies.resources[uri] == "vocabulary"
+    ):
+        copies.write_whole(uri, app.outdir, pagename, app.config.language)
     context["metatags"] = context.get("metatags", "") + RdfCopies.alternate_links(
         outfile
     )
