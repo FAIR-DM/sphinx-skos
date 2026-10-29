@@ -14,18 +14,20 @@ class CopyFormat(NamedTuple):
         suffix: The file suffix that replaces the page's ``.html``.
         rdflib_format: The name rdflib serialises the format with.
         media_type: The media type of the format.
+        label: The name of the format as a link to a copy shows it.
     """
 
     suffix: str
     rdflib_format: str
     media_type: str
+    label: str
 
 
 COPY_FORMATS = (
-    CopyFormat(".ttl", "turtle", "text/turtle"),
-    CopyFormat(".jsonld", "json-ld", "application/ld+json"),
-    CopyFormat(".rdf", "xml", "application/rdf+xml"),
-    CopyFormat(".nt", "nt", "application/n-triples"),
+    CopyFormat(".ttl", "turtle", "text/turtle", "Turtle"),
+    CopyFormat(".jsonld", "json-ld", "application/ld+json", "JSON-LD"),
+    CopyFormat(".rdf", "xml", "application/rdf+xml", "RDF/XML"),
+    CopyFormat(".nt", "nt", "application/n-triples", "N-Triples"),
 )
 
 

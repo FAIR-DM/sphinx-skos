@@ -12,7 +12,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
 ## Module `sphinx_skos`
 
 `setup(app)`
-: Registers the three settings, the `skos` domain and the build handlers. Sphinx calls it when the
+: Registers the three settings, the `skos` domain, the `DownloadLinks` post-transform and the
+  build handlers. Sphinx calls it when the
   site lists `sphinx_skos` in `extensions`.
 
 `generate_pages(app)`
@@ -123,7 +124,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
   there.
 
 `CopyFormat`, `COPY_FORMATS`
-: A format a copy is written in: `suffix`, `rdflib_format` and `media_type`. `COPY_FORMATS` lists
+: A format a copy is written in: `suffix`, `rdflib_format`, `media_type` and `label`, the name a
+  download link shows. `COPY_FORMATS` lists
   the four.
 
 ## Module `sphinx_skos.domain`
@@ -150,7 +152,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
   as a cross-reference to its page, as a link to itself by its `name` when it has no page, or as
   plain text when its scheme is `javascript`, `data` or `vbscript`; `uri_reference(uri, text)`
   makes that last choice. `links(uris)` does so for each URI and `target_links(targets)` for each
-  `Target` of a mapping link. `vocabularies` is the `Vocabularies` of the build in progress and
+  `Target` of a mapping link. `download_field()` builds the last field of a generated page: a link
+  for each format of an RDF copy, with no target yet. `vocabularies` is the `Vocabularies` of the build in progress and
   `pages` its `GeneratedPages`.
 
 `VocabularyDirective`, `ConceptDirective`, `CollectionDirective`
@@ -161,6 +164,11 @@ warnings take part in Sphinx's warning handling, including `-W`.
   collections, broader, narrower and related concepts, with one field for each mapping property
   it uses. The names of the labelled fields are translated through the `sphinx_skos` message
   catalogue.
+
+`DownloadLinks`
+: A Sphinx post-transform. As a page is resolved for writing, it points each link of the download
+  field at the page's RDF copies, or at the vocabulary's whole files under `dirhtml`, relative to
+  the page, and removes the field under a builder that does not write HTML.
 
 `translate`
 : The function the directives pass their fixed text through: `sphinx.locale.get_translation`

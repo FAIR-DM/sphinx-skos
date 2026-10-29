@@ -174,10 +174,14 @@ class FieldLinks(HTMLParser):
 
 
 def field_links(app: SphinxTestApp, uri: str) -> list[list[str]]:
-    """Return the links of each field on the page of ``uri``."""
+    """Return the links of each field on the page of ``uri``, but the last.
+
+    The last field of a generated page is its download field, which has its own
+    tests.
+    """
     parser = FieldLinks()
     parser.feed(page_html(app, page(uri.removeprefix(BASE))))
-    return parser.fields
+    return parser.fields[:-1]
 
 
 def href(app: SphinxTestApp, source: str, target: str) -> str:
@@ -496,6 +500,8 @@ def shown_fields(app: SphinxTestApp, docname: str, uri: str) -> list[tuple[str, 
         if field_list is None or field_list[0].astext().split("\n\n")[-1] != uri:
             continue
         for field in field_list.findall(nodes.field):
+            if field.get("skos_download"):
+                continue
             addresses = [
                 str(node.get("reftarget") or node.get("refuri"))
                 for node in field.findall(nodes.Element)
@@ -838,3 +844,170 @@ class TestEveryProperty:
             )
 
         assert shown[0] == shown[1]
+
+
+RDF_SUFFIXES = (".ttl", ".jsonld", ".rdf", ".nt")
+
+
+class RdfLinks(HTMLParser):
+    """Collect the ``href`` of every link to a file with an RDF suffix."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.hrefs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        href = dict(attrs).get("href")
+        if tag == "a" and href is not None and href.endswith(RDF_SUFFIXES):
+            self.hrefs.append(href)
+
+
+def rdf_links(page_file: Path) -> list[str]:
+    """Return the links in a built page that name an RDF file."""
+    parser = RdfLinks()
+    parser.feed(page_file.read_text(encoding="utf-8"))
+    return parser.hrefs
+
+
+def vocabulary_site(rootdir: Path, tmp_path: Path, name: str = "site") -> Path:
+    """Copy the test site that has several vocabularies, without its problems."""
+    site = tmp_path / name
+    shutil.copytree(rootdir / "test-vocabularies", site)
+    shutil.rmtree(site / "problems")
+    return site
+
+
+def built_page(app: SphinxTestApp, address: str) -> Path:
+    """Return the output file of a generated page."""
+    return Path(app.builder.get_outfilename(page(address)))
+
+
+def count_fields(app: SphinxTestApp, address: str) -> int:
+    """Return how many fields the page has once it is resolved for the builder."""
+    document = app.env.get_and_resolve_doctree(
+        page(address), app.builder, tags=app.builder.tags
+    )
+    return len(list(document.findall(nodes.field)))
+
+
+class TestDownloads:
+    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    @pytest.mark.parametrize(
+        "address", ["date-types/available", "date-types/by-origin"]
+    )
+    def test_a_concept_and_a_collection_link_their_four_copies_and_each_resolves(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        theme: str,
+        address: str,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("dirhtml", srcdir=site, confoverrides={"html_theme": theme})
+        app.build()
+
+        file = built_page(app, address)
+        links = rdf_links(file)
+        assert sorted(links) == sorted(f"index{suffix}" for suffix in RDF_SUFFIXES)
+        for link in links:
+            assert (file.parent / link).is_file()
+
+    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    def test_a_vocabulary_links_its_four_whole_files_and_each_resolves(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        theme: str,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("dirhtml", srcdir=site, confoverrides={"html_theme": theme})
+        app.build()
+
+        file = built_page(app, "date-types")
+        links = rdf_links(file)
+        assert sorted(links) == sorted(
+            f"../date-types{suffix}" for suffix in RDF_SUFFIXES
+        )
+        for link in links:
+            assert (file.parent / link).resolve().is_file()
+            assert (file.parent / link).resolve().parent == Path(
+                app.outdir
+            ) / "vocabularies"
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_a_page_written_by_hand_has_no_download_links(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        for name in ("guide", "sections"):
+            assert rdf_links(Path(app.outdir) / name / "index.html") == []
+        assert len(rdf_links(built_page(app, "rel/hub"))) == len(RDF_SUFFIXES)
+
+    def test_html_then_dirhtml_over_one_doctree_directory_resolves_every_link(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        builddir = tmp_path / "build"
+        make_app("html", srcdir=site, builddir=builddir).build()
+        app = make_app("dirhtml", srcdir=site, builddir=builddir)
+        app.build()
+
+        for address in ("date-types", "date-types/available", "date-types/by-origin"):
+            file = built_page(app, address)
+            links = rdf_links(file)
+            assert len(links) == len(RDF_SUFFIXES)
+            for link in links:
+                assert (file.parent / link).resolve().is_file()
+
+    def test_under_html_every_page_links_its_own_copies(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("html", srcdir=site)
+        app.build()
+
+        for address in ("date-types", "date-types/available"):
+            file = built_page(app, address)
+            links = rdf_links(file)
+            assert len(links) == len(RDF_SUFFIXES)
+            for link in links:
+                assert (file.parent / link).is_file()
+
+    def test_a_text_build_has_no_download_field(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        shown = {}
+        for builder in ("text", "dirhtml"):
+            site = vocabulary_site(rootdir, tmp_path, builder)
+            app = make_app(builder, srcdir=site)
+            app.build()
+            shown[builder] = [
+                count_fields(app, address)
+                for address in ("date-types", "date-types/available")
+            ]
+
+        assert [html - text for html, text in zip(shown["dirhtml"], shown["text"])] == [
+            1,
+            1,
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="translation")
+    def test_the_field_name_is_translated(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        document = app.env.get_doctree(page("words/shared"))
+        names = [name.astext() for name in document.findall(nodes.field_name)]
+        assert "Herunterladen" in names
+        assert "Download" not in names

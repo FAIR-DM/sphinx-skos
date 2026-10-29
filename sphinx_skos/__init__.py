@@ -11,6 +11,7 @@ from sphinx.project import Project
 from sphinx.util.typing import ExtensionMetadata
 
 from sphinx_skos.copies import RdfCopies
+from sphinx_skos.directives import DownloadLinks
 from sphinx_skos.domain import SKOSDomain
 from sphinx_skos.pages import GeneratedPages
 from sphinx_skos.vocabularies import Vocabularies
@@ -160,6 +161,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_config_value("skos_base_uri", "", "env", types=[str])
     app.add_config_value("skos_directory", "vocabularies", "env", types=[str])
     app.add_domain(SKOSDomain)
+    app.add_post_transform(DownloadLinks)
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)

@@ -1,6 +1,8 @@
 """The directives that turn a resource's URI into content."""
 
 import re
+from os.path import relpath
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from docutils import nodes
@@ -8,10 +10,13 @@ from rdflib import DCTERMS, OWL, RDFS
 from rdflib.term import BNode, Node, URIRef
 from rdflib.term import Literal as RDFLiteral
 from sphinx import addnodes
+from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.locale import get_translation
+from sphinx.transforms.post_transforms import SphinxPostTransform
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxDirective
 
+from sphinx_skos.copies import COPY_FORMATS, RdfCopies
 from sphinx_skos.vocabularies import (
     MAPPING_PROPERTIES,
     SKOS,
@@ -113,7 +118,26 @@ class ResourceDirective(SphinxDirective):
             }
         )
         field_list += self.other_fields(subject, shown, frozenset())
+        if self.pages.uri_for(self.env.docname) == uri:
+            field_list += self.download_field()
         return field_list
+
+    def download_field(self) -> nodes.field:
+        """Return the field that links a generated page's RDF files.
+
+        Each link names its format by suffix and has no target: the builder
+        that writes the page decides where the files are.
+
+        Returns:
+            A field with one link for each format.
+        """
+        links: list[list[nodes.Node]] = [
+            [nodes.reference("", copy.label, internal=True, skos_suffix=copy.suffix)]
+            for copy in COPY_FORMATS
+        ]
+        field = self.field(translate("Download"), *links)
+        field["skos_download"] = True
+        return field
 
     def facts(self, uri: str) -> Facts:
         """Return the facts every resource has, after its URI.
@@ -488,3 +512,50 @@ class CollectionDirective(ResourceDirective):
         """
         members = self.vocabularies.members_of(uri, self.config.language)
         return [*super().facts(uri), (translate("Members"), self.links(members))]
+
+
+class DownloadLinks(SphinxPostTransform):
+    """Point the download links of a generated page at the files they name.
+
+    The field is removed under a builder that does not write HTML. A
+    vocabulary's page links its whole files under ``dirhtml`` and its own
+    copies otherwise; any other page links its own copies.
+    """
+
+    default_priority: ClassVar[int] = 10
+
+    def run(self, **kwargs: object) -> None:
+        """Set the target of each download link, or remove the field.
+
+        Args:
+            **kwargs: Passed on by Sphinx, unused.
+        """
+        fields = [
+            field
+            for field in self.document.findall(nodes.field)
+            if field.get("skos_download")
+        ]
+        # Sphinx's own post-transforms read the builder this way: the public
+        # ``app`` properties are deprecated.
+        builder = self.env._app.builder
+        if builder.format != "html":
+            for field in fields:
+                field.parent.remove(field)
+            return
+        docname = self.env.current_document.docname
+        domain = cast("SKOSDomain", self.env.domains["skos"])
+        uri = domain.pages.uri_for(docname) or ""
+        outfile = Path(cast(StandaloneHTMLBuilder, builder).get_outfilename(docname))
+        if builder.name == "dirhtml" and domain.vocabularies.resources.get(uri) == (
+            "vocabulary"
+        ):
+            files = RdfCopies.whole_paths(builder.outdir, docname)
+        else:
+            files = RdfCopies.paths(outfile)
+        targets = {
+            copy.suffix: Path(relpath(path, outfile.parent)).as_posix()
+            for copy, path in zip(COPY_FORMATS, files, strict=True)
+        }
+        for field in fields:
+            for reference in field.findall(nodes.reference):
+                reference["refuri"] = targets[reference["skos_suffix"]]
