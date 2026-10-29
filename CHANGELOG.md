@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A page's Turtle copy uses the prefix names its own vocabulary file declares, including the empty
+  prefix, instead of generated names such as `default3`. The statements are unchanged.
+
 ## [v0.3.2] - 2026-10-28
 
 ### Added

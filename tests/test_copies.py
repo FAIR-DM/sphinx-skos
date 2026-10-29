@@ -195,6 +195,18 @@ class TestRdfCopies:
 
         assert str(dict(graph.namespaces())["skos"]) == str(SKOS)
 
+    @pytest.mark.sphinx("dirhtml", testroot="prefixes")
+    def test_a_copy_uses_the_empty_prefix_its_own_file_declares(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        for name in ["first", "second", "third"]:
+            text = (Path(app.outdir) / name / "kinds" / "index.ttl").read_text()
+            assert f"@prefix : <https://example.org/vocab/{name}/> ." in text
+            assert "default" not in text
+            assert ":kinds a skos:OrderedCollection" in text
+
     def test_a_removed_resources_copies_are_gone_after_a_rebuild(
         self, make_app: MakeApp, rootdir: Path, tmp_path: Path
     ) -> None:

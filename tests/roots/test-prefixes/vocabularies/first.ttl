@@ -1,0 +1,13 @@
+@prefix : <https://example.org/vocab/first/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+: a skos:ConceptScheme ;
+    skos:prefLabel "The first scheme"@en .
+
+:thing a skos:Concept ;
+    skos:inScheme : ;
+    skos:prefLabel "A first thing"@en .
+
+:kinds a skos:OrderedCollection ;
+    skos:prefLabel "first kinds"@en ;
+    skos:memberList ( :thing ) .
