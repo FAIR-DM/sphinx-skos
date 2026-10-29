@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from docutils import nodes
 from sphinx import addnodes
+from sphinx.environment.adapters.toctree import global_toctree_for_doc
 from sphinx.testing.util import SphinxTestApp
 
 from sphinx_skos.pages import MARKER
@@ -285,6 +286,48 @@ class TestVocabularyNavigation:
             ]
             assert {domain.pages.docname_for(uri) for uri in members} <= below
         assert "vocabularies/date-types/in-order" in descendants(app, INDEX)
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_navigation_nests_each_member_inside_its_vocabulary_entry(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        vocabulary = BASE + "date-types"
+        navigation = global_toctree_for_doc(
+            app.env,
+            "vocabularies/date-types/available",
+            app.builder,
+            tags=app.builder.tags,
+            collapse=False,
+            includehidden=True,
+            titles_only=True,
+        )
+        assert navigation is not None
+        page = app.builder.get_relative_uri(
+            "vocabularies/date-types/available", "vocabularies/date-types"
+        )
+        entry = next(
+            item
+            for item in navigation.findall(nodes.list_item)
+            if any(
+                reference.get("refuri") == page
+                for reference in item[0].findall(nodes.reference)
+            )
+        )
+        nested = {
+            reference.get("refuri") for reference in entry.findall(nodes.reference)
+        }
+        members = [
+            *domain.vocabularies.concepts_in(vocabulary, app.config.language),
+            *domain.vocabularies.collections_in(vocabulary, app.config.language),
+        ]
+        for uri in members:
+            target = app.builder.get_relative_uri(
+                "vocabularies/date-types/available", domain.pages.docname_for(uri)
+            )
+            assert target in nested
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_the_vocabulary_page_body_shows_no_toctree(

@@ -230,13 +230,17 @@ class GeneratedPages:
             kind: The resource's kind.
 
         Returns:
-            The marker line and the resource's directive. A vocabulary's source
-            also holds a hidden list of its concepts and then its collections
-            that have a page.
+            The marker line and the resource's directive. A vocabulary's
+            directive also holds, as its content, a hidden list of its concepts
+            and then its collections that have a page, so the list nests under
+            the vocabulary's title in the navigation.
         """
         text = f"{MARKER}\n\n.. skos:{kind}:: {uri}\n"
         if kind == "vocabulary":
-            text += self.toctree_text(self.members_of(uri), ":hidden:")
+            toctree = self.toctree_text(self.members_of(uri), ":hidden:")
+            text += "".join(
+                f"   {line}\n" if line else "\n" for line in toctree.splitlines()
+            )
         return text
 
     def members_of(self, vocabulary: str) -> list[str]:

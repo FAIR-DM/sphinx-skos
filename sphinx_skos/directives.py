@@ -47,7 +47,7 @@ class ResourceDirective(SphinxDirective):
 
     required_arguments = 1
     optional_arguments = 0
-    has_content = False
+    has_content = True
     kind: ClassVar[Kind]
     # The properties the kind's own fields show, which the other properties
     # leave out.
@@ -66,7 +66,11 @@ class ResourceDirective(SphinxDirective):
         return cast("SKOSDomain", self.env.domains["skos"]).pages
 
     def run(self) -> list[nodes.Node]:
-        """Return a section titled with the resource, or warn why not."""
+        """Return a section titled with the resource, or warn why not.
+
+        The directive's content is parsed into the section, after the fields,
+        so a table of contents in it nests under the resource's title.
+        """
         uri = self.arguments[0]
         vocabularies = self.vocabularies
         if vocabularies.resources.get(uri) != self.kind:
@@ -83,6 +87,7 @@ class ResourceDirective(SphinxDirective):
         section["names"].append(nodes.fully_normalize_name(title))
         self.state.document.note_implicit_target(section)
         section += self.fields(uri)
+        section += self.parse_content_to_nodes()
         return [section]
 
     def fields(self, uri: str) -> nodes.field_list:

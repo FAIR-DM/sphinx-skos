@@ -11,7 +11,10 @@ with the same directives, so a page you write by hand shows the same fields and 
 | `skos:concept` | A concept |
 | `skos:collection` | A collection |
 
-Each takes the resource's URI as its one argument and has no content and no options.
+Each takes the resource's URI as its one argument and has no options. Content written under the
+directive goes inside the resource's section, after its fields, so a `toctree` there nests under
+the resource's title in a theme's navigation. A vocabulary's generated page uses this for its
+hidden list of concepts and collections.
 
 ```rst
 .. skos:concept:: https://w3id.org/example/vocabularies/date-types/available
