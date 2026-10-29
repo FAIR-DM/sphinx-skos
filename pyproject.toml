@@ -28,6 +28,9 @@ dependencies = [
     "sphinx>=9.0",
 ]
 
+[project.scripts]
+sphinx-skos = "sphinx_skos.cli:main"
+
 [project.urls]
 homepage = "https://github.com/FAIR-DM/sphinx-skos"
 repository = "https://github.com/FAIR-DM/sphinx-skos"

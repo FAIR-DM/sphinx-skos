@@ -52,6 +52,18 @@ warnings take part in Sphinx's warning handling, including `-W`.
   the nearest `pyproject.toml` and its directory, or `None`. `set_by_site(config, name)` says
   whether `conf.py` or `-D` set a value, which comparing with the default cannot tell.
 
+## Module `sphinx_skos.cli`
+
+`main(argv=None)`
+: The `sphinx-skos` command: parses the `build` subcommand and its options, builds the site of the
+  current directory and returns the exit code. `argv` is the command line without the program
+  name, `sys.argv` when omitted. See the [command reference](command.md).
+
+`SiteBuild(root, output, fail_on_warning)`
+: One build of the site that `root` holds. `run()` builds it with `dirhtml` and returns Sphinx's
+  exit code, or 2 when the project has neither a `[tool.sphinx-skos]` table nor a `docs/conf.py`.
+  `conf_py` is the path of the project's `docs/conf.py`, whether or not the file exists.
+
 ## Module `sphinx_skos.vocabularies`
 
 `Vocabularies(patterns, confdir, base_uri)`
