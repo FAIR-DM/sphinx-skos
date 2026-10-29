@@ -97,7 +97,7 @@ any vocabulary from any organisation.
   look-and-feel option. It installs [Furo](https://pradyunsg.me/furo/) and uses it when the site
   sets no theme, so a site looks finished without choosing one. A site's own title and logo can
   be named in the `[tool.sphinx-skos]` table, which passes them to Sphinx's `html_title` and
-  `html_logo`. Requests to add a colour scheme or a layout option to this package will be closed
+  `html_logo`, and the repository URL in its `[project.urls]` is linked from Furo's footer. Requests to add a colour scheme or a layout option to this package will be closed
   with a pointer to [Sphinx's HTML theming
   documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
 - **Not a vocabulary editor.** The Turtle files are the source. The extension reads them and

@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A site built with Furo links its repository from the footer of every page with a GitHub icon.
+  The URL is the first of `Repository`, `Source`, `Source Code` and `Homepage` in the
+  `[project.urls]` of the site's `pyproject.toml` that holds a URL. A site that sets `footer_icons`
+  in `html_theme_options` keeps its own.
+
 ## [v0.5.0] - 2026-10-29
 
 ### Changed

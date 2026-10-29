@@ -25,7 +25,9 @@ deletes generated files in it.
    ```
 
    To show a logo in the sidebar, add `logo` with the path of an image file, read from the same
-   directory, such as `logo = "docs/_static/logo.svg"`.
+   directory, such as `logo = "docs/_static/logo.svg"`. To link the site's repository from the
+   footer, name it in `[project.urls]`, such as `Repository =
+   "https://github.com/example/vocabularies"`.
 
 2. Build the site from the same directory.
 
