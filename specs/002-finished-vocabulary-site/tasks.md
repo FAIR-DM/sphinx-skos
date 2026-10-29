@@ -256,3 +256,15 @@ spec edited to read as current where this feature changed it (FR-004, FR-008, FR
 summary). No test: documentation. Before the pull request is marked ready, the fairdm-vocabularies
 files are built by hand with `sphinx-skos build -W` from a three-key table, and the result for
 SC-001 to SC-004 goes in the pull request body.
+
+## Fixes
+
+#### T015 — The navigation nests each vocabulary's members under its title
+
+**Files**: `sphinx_skos/directives.py`, `sphinx_skos/pages.py`, `tests/test_pages.py`,
+`docs/reference/directives.md`
+
+The hidden toctree sat beside the directive's section, so a theme drew the concepts beside their
+vocabulary rather than beneath it. The directives now parse their content into their section and
+the vocabulary's toctree is written as that content. Test: the resolved navigation nests every
+member's entry inside its vocabulary's entry (US3 scenario 2, SC-004).
