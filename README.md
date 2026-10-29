@@ -95,8 +95,8 @@ any vocabulary from any organisation.
 - **Not a theme.** Logos, colours, fonts and layout come from Sphinx's own theme settings in your
   `conf.py`: `html_theme`, `html_logo`, `html_theme_options` and the rest. The extension adds no
   look-and-feel option. It installs [Furo](https://pradyunsg.me/furo/) and uses it when the site
-  sets no theme, so a site looks finished without choosing one. Requests to add a logo, a colour scheme or a layout option to this package will
-  be closed with a pointer to [Sphinx's HTML theming
+  sets no theme, so a site looks finished without choosing one. Requests to add a logo, a colour
+  scheme or a layout option to this package will be closed with a pointer to [Sphinx's HTML theming
   documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
 - **Not a vocabulary editor.** The Turtle files are the source. The extension reads them and
   never writes them back.
