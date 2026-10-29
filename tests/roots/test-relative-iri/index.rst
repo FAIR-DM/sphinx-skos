@@ -3,4 +3,4 @@ Relative IRIs
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

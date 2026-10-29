@@ -35,8 +35,8 @@ Under the `dirhtml` builder a vocabulary also has four whole files, which hold t
 vocabulary files it comes from instead of the vocabulary's own triples alone. They are named after
 the vocabulary's page address, with the suffix of each format, and sit beside the page's
 directory: the vocabulary at `https://example.org/vocab/date-types` has
-`vocabularies/date-types.ttl`, `.jsonld`, `.rdf` and `.nt`, next to its page at
-`vocabularies/date-types/`.
+`catalogue/date-types.ttl`, `.jsonld`, `.rdf` and `.nt`, next to its page at
+`catalogue/date-types/`.
 
 A whole file holds every statement of every vocabulary file that states something about the
 vocabulary, a concept in it or a collection in it, nothing added and nothing dropped. A vocabulary

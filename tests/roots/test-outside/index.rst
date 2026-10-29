@@ -3,4 +3,4 @@ Outside
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

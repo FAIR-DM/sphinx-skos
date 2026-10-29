@@ -3,4 +3,4 @@ Control characters
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

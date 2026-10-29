@@ -3,4 +3,4 @@ Test site
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

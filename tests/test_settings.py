@@ -117,12 +117,12 @@ class TestTableSettings:
             {
                 "pyproject.toml": TABLE,
                 "docs/conf.py": (
-                    "extensions = ['sphinx_skos']\nskos_directory = 'vocabularies'\n"
+                    "extensions = ['sphinx_skos']\nskos_directory = 'catalogue'\n"
                 ),
             }
         )
 
-        assert app.config.skos_directory == "vocabularies"
+        assert app.config.skos_directory == "catalogue"
 
     def test_an_unknown_key_is_named_in_a_warning(self, build_site: Build) -> None:
         app = build_site(
@@ -234,7 +234,7 @@ class TestTableSettings:
         )
 
         assert app.config.project == "Mine"
-        assert app.config.skos_directory == "vocabularies"
+        assert app.config.skos_directory == "catalogue"
 
 
 class TestTheme:

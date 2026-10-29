@@ -36,7 +36,7 @@ elements. Your own pages can show any resource with the `skos:vocabulary`, `skos
 
 ## Usage
 
-Describe the site in `pyproject.toml`. Keep the vocabulary files outside the `vocabularies/`
+Describe the site in `pyproject.toml`. Keep the vocabulary files outside the `catalogue/`
 directory, which holds the generated pages:
 
 ```toml

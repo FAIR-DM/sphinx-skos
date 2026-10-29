@@ -7,7 +7,7 @@ enough to publish, or to see how they will look. You need no Sphinx knowledge an
 ## Before you start
 
 You need sphinx-skos installed, and vocabulary files in Turtle (`.ttl`). Keep the files outside
-the `vocabularies/` directory: the build treats that directory as its own and the extension
+the `catalogue/` directory: the build treats that directory as its own and the extension
 deletes generated files in it.
 
 ## Steps
@@ -37,12 +37,12 @@ deletes generated files in it.
    fail the build, which is what you want in a publishing job; leave it out to see the warnings
    and still get a site.
 
-3. Check the build output. Open `_build/site/index.html`: it lists every vocabulary. A concept
+3. Check the build output. Open `_build/site/index.html`: it links the catalogue, which lists every vocabulary. A concept
    with the URI `https://w3id.org/example/vocabularies/date-types/available` has its page at
-   `vocabularies/date-types/available/index.html`. Every vocabulary, concept and collection in
+   `catalogue/date-types/available/index.html`. Every vocabulary, concept and collection in
    the files has a page, and nothing else does.
 
-4. Add `_build/` and `vocabularies/` to `.gitignore`, because both are produced by the build.
+4. Add `_build/` and `catalogue/` to `.gitignore`, because both are produced by the build.
 
 ## Add pages of your own
 

@@ -3,4 +3,4 @@ Properties
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

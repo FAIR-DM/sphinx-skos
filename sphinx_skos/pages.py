@@ -276,7 +276,7 @@ class GeneratedPages:
         """Return a ``toctree`` directive listing documents.
 
         Args:
-            entries: The entries to list, in order, such as ``/vocabularies/index``.
+            entries: The entries to list, in order, such as ``/catalogue/index``.
             option: The directive option line, such as ``:maxdepth: 1``.
 
         Returns:
@@ -295,7 +295,7 @@ class GeneratedPages:
             with a page and a hidden list of the concepts and collections with
             a page that no vocabulary lists.
         """
-        title = translate("Vocabularies")
+        title = translate("Catalogue")
         uris = self.vocabularies.sort_by_title(self.docnames, self.language)
         kinds = self.vocabularies.resources
         vocabularies = [uri for uri in uris if kinds[uri] == "vocabulary"]

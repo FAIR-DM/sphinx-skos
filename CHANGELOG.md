@@ -6,6 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** the generated pages go in `catalogue/` by default instead of `vocabularies/`, and
+  the index page is titled "Catalogue" instead of "Vocabularies". A site whose repository is
+  itself named for its vocabularies no longer gets addresses such as `vocabularies/vocabularies/`.
+  A site that relies on the default moves every page address from `vocabularies/` to
+  `catalogue/`: change `vocabularies/index` to `catalogue/index` in its `toctree` and
+  `vocabularies/` to `catalogue/` in `.gitignore`, and redirect each old address, including any
+  redirect service that points resource URIs at the pages. Set `skos_directory`, or `directory` in
+  `[tool.sphinx-skos]`, to `"vocabularies"` to keep the old addresses.
+
 ## [v0.4.0] - 2026-10-29
 
 ### Added

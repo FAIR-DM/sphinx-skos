@@ -3,4 +3,4 @@ Hidden
 
 .. toctree::
 
-   vocabularies/index
+   catalogue/index

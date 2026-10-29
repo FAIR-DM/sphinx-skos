@@ -5,4 +5,4 @@ Prose
 
    guide
    sections
-   vocabularies/index
+   catalogue/index
