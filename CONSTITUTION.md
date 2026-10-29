@@ -72,13 +72,15 @@ utilities that genuinely share no subject.
 
 ### Article X — Content, never look and feel
 The extension emits document content (docutils nodes) and RDF copies. It adds no stylesheet,
-script, HTML template, image, static file or theme option. It sets one default, `html_theme =
-"furo"`, for a site that sets no theme itself, and installs Furo for it. Two things pass through
-it without being its own:
+script, HTML template, image, static file or theme option of its own. It sets one default,
+`html_theme = "furo"`, for a site that sets no theme itself, and installs Furo for it. Two things
+pass through it without being its own:
 
 - A site's title and logo, written in the `[tool.sphinx-skos]` table, go to Sphinx's
-  `html_title` and `html_logo`, so a site with no `conf.py` can name them. The words and the
-  image are the site's.
+  `html_title` and `html_logo`, and its repository link, the repository URL in its
+  `pyproject.toml`'s `[project.urls]`, goes to Furo's `footer_icons` as a GitHub icon, so a site
+  with no `conf.py` shows them. The words, the image and the address are the site's, and a site
+  that sets any of them itself keeps its own.
 - The navigation opens only the branch of the page being read below its top level, because the
   generated pages would otherwise list every concept of every vocabulary on every page. The
   entries are Sphinx's own, and no markup is added to them.
@@ -131,4 +133,4 @@ Read at plan and review. Applies to every change.
 
 ---
 
-**Version**: 1.2.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-29
+**Version**: 1.3.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-29

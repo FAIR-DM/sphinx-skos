@@ -9,7 +9,8 @@ and what a pull request needs.
 Colours, fonts and layout come from the Sphinx theme a site chooses, set in its `conf.py`
 with `html_theme` and `html_theme_options`. See Sphinx's
 [HTML theming documentation](https://www.sphinx-doc.org/en/master/usage/theming.html). A site's
-own title and logo can be named in its `[tool.sphinx-skos]` table, which passes them to Sphinx.
+own title and logo can be named in its `[tool.sphinx-skos]` table, which passes them to Sphinx,
+and its repository link is taken from its `[project.urls]`.
 
 Issues and pull requests asking this package for a logo of its own, a colour scheme, a
 stylesheet, a template or a layout option are closed with a pointer here. That is a standing decision, recorded

@@ -98,5 +98,5 @@ prefix.
 
 **Look and feel**
 Logos, colours, fonts and layout. Set by the site's Sphinx theme, never by this extension, which
-only chooses the default theme and passes a site's own title and logo from its settings table to
-Sphinx.
+only chooses the default theme, passes a site's own title and logo from its settings table to
+Sphinx, and links the site's own repository from Furo's footer.

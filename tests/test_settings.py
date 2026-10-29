@@ -285,6 +285,115 @@ class TestTheme:
         assert app.config.html_theme_options == {}
 
 
+class TestRepositoryLink:
+    CONF = "extensions = ['sphinx_skos']\n"
+    URL = "https://github.com/example/vocabularies"
+
+    @staticmethod
+    def links(app: SphinxTestApp) -> list[str]:
+        icons = app.config.html_theme_options.get("footer_icons", [])
+        return [icon["url"] for icon in icons]
+
+    def test_the_repository_url_is_a_footer_icon(self, build_site: Build) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
+                "docs/conf.py": self.CONF,
+            }
+        )
+
+        assert self.links(app) == [self.URL]
+
+    def test_the_link_is_in_the_built_footer(self, build_site: Build) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
+                "docs/conf.py": self.CONF,
+            }
+        )
+
+        app.build()
+
+        page = (Path(app.outdir) / "index.html").read_text(encoding="utf-8")
+        assert f'href="{self.URL}"' in page
+
+    @pytest.mark.parametrize("key", ["Repository", "Source", "Source Code", "Homepage"])
+    def test_each_key_names_the_repository(self, build_site: Build, key: str) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": f'[project.urls]\n"{key}" = "{self.URL}"\n',
+                "docs/conf.py": self.CONF,
+            }
+        )
+
+        assert self.links(app) == [self.URL]
+
+    def test_the_first_key_in_order_wins_whatever_its_case(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": (
+                    "[project.urls]\n"
+                    'homepage = "https://example.org/"\n'
+                    'source = "not a url"\n'
+                    f'REPOSITORY = "{self.URL}"\n'
+                ),
+                "docs/conf.py": self.CONF,
+            }
+        )
+
+        assert self.links(app) == [self.URL]
+
+    def test_footer_icons_the_site_sets_win(self, build_site: Build) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
+                "docs/conf.py": self.CONF
+                + "html_theme_options = {'footer_icons': []}\n",
+            }
+        )
+
+        assert app.config.html_theme_options == {"footer_icons": []}
+
+    def test_other_theme_options_the_site_sets_are_kept(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
+                "docs/conf.py": self.CONF
+                + "html_theme_options = {'sidebar_hide_name': True}\n",
+            }
+        )
+
+        assert app.config.html_theme_options["sidebar_hide_name"] is True
+        assert self.links(app) == [self.URL]
+
+    def test_another_theme_gets_no_link(self, build_site: Build) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
+                "docs/conf.py": self.CONF + "html_theme = 'classic'\n",
+            }
+        )
+
+        assert app.config.html_theme_options == {}
+
+    def test_a_project_with_no_url_gets_no_link_and_no_warning(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": '[project]\nname = "example"\n',
+                "docs/conf.py": self.CONF,
+            }
+        )
+
+        assert app.config.html_theme_options == {}
+        assert app.warning.getvalue() == ""
+
+
 class TestDependencies:
     def test_furo_is_a_requirement_without_an_extra(self) -> None:
         requirements = [Requirement(line) for line in requires("sphinx-skos") or []]

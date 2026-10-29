@@ -55,8 +55,12 @@ warnings take part in Sphinx's warning handling, including `-W`.
   theme. `apply(app, config)` is connected to Sphinx's `config-inited` event, before Sphinx reads
   the theme: it sets each setting the table holds unless `conf.py` or `-D` set it, then sets
   `html_theme` to `furo` unless the site set a theme. A `title` also sets `html_title`, and a
-  `logo` path is read from the table's directory. `find_table(confdir)` gives the table of
-  the nearest `pyproject.toml` and its directory, or `None`. `set_by_site(config, name)` says
+  `logo` path is read from the table's directory. Under Furo, the [repository
+  link](settings.md#repository-link) goes to `footer_icons` unless the site sets them.
+  `find_document(confdir)` gives the nearest `pyproject.toml` as a whole and its directory, or
+  `None`. `find_table(confdir)` gives the table of that file and its directory, or `None`.
+  `repository_url(document)` gives the repository URL among the document's `[project.urls]`, or
+  `None`. `set_by_site(config, name)` says
   whether `conf.py` or `-D` set a value, which comparing with the default cannot tell.
 
 ## Module `sphinx_skos.cli`
