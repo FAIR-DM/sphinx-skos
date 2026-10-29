@@ -1,6 +1,6 @@
 # Settings
 
-The settings sphinx-skos adds to a site's `conf.py`. A change to either one rebuilds the whole
+The settings sphinx-skos adds to a site's `conf.py`. A change to any of them rebuilds the whole
 site. To use them, follow [Publish vocabulary files as a
 site](../how-to/publish-vocabulary-files.md).
 
@@ -49,3 +49,23 @@ A resource gets a build warning naming it, and no page, when:
 
 The site's own document is kept in every case, including a file that `exclude_patterns` hides
 from Sphinx: the page is not written over it and the warning names the address and the resource.
+
+## skos_directory
+
+- **Type**: string
+- **Default**: `"vocabularies"`
+
+The directory, inside the site's source directory, that holds every page the extension generates.
+A resource's page is at this directory followed by its page address, so with the default the
+concept `https://example.org/vocab/a/b` and the base URI `https://example.org/vocab/` give the
+page `vocabularies/a/b/`. The directory also holds an index page, `index`, that links every
+vocabulary and every concept and collection that has a page. List it in a `toctree`, as
+[Add vocabulary pages to a site](../how-to/add-vocabulary-pages-to-a-site.md) shows.
+
+The value is a relative path with `/` between its parts, such as `vocabularies` or
+`reference/terms`. When it is empty, starts with `/`, or has an empty, `.` or `..` part, the build
+gives one warning that names `skos_directory` and generates no page.
+
+Keep the vocabulary files outside this directory, which a site normally ignores in version
+control. The extension deletes a generated file in it when its resource goes, and a file of the
+site's own at a page's address stops that page from being written.

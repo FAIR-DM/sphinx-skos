@@ -6,6 +6,22 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The `skos_directory` setting, `vocabularies` by default, names the directory that holds the
+  generated pages.
+- An index page, `vocabularies/index`, links every vocabulary. List it in a `toctree`.
+
+### Changed
+
+- **Breaking:** generated pages are no longer at the root of the source directory. Every page
+  address now starts with `skos_directory`, so `date-types/available/` becomes
+  `vocabularies/date-types/available/`. Add a redirect from each old address. Keep vocabulary
+  files outside the directory, because it now holds only generated files.
+- Generated pages are no longer marked `:orphan:`. A site that lists no page that leads to the
+  index gets Sphinx's warning that the index is in no table of contents.
+- Pages that an earlier version wrote at the old addresses are deleted at the first build.
+
 ## [v0.3.3] - 2026-10-29
 
 ### Fixed

@@ -18,7 +18,7 @@ vocabulary files in Turtle (`.ttl`).
 
    ```python
    extensions = ["sphinx_skos"]
-   skos_vocabularies = ["vocabularies/*.ttl"]
+   skos_vocabularies = ["data/*.ttl"]
    skos_base_uri = "https://w3id.org/example/vocabularies/"
    ```
 
@@ -30,30 +30,11 @@ vocabulary files in Turtle (`.ttl`).
 
 3. Check the build output. A concept with the URI
    `https://w3id.org/example/vocabularies/date-types/available` has its page at
-   `date-types/available/index.html`. Every vocabulary, concept and collection in the files has a
+   `vocabularies/date-types/available/index.html`. Every vocabulary, concept and collection in the files has a
    page, and nothing else does.
 
-4. Link to a vocabulary from one of the site's own pages by listing its page address in a
-   `toctree`. The generated pages are not in any table of contents on their own, and Sphinx does
-   not warn about that.
-
-   ````rst
-   .. toctree::
-
-      date-types
-   ````
-
-5. If the site's source directory is under version control, list the generated sources in
-   `.gitignore`. Every build writes them again, so they need not be kept. They sit at the page
-   addresses, so a vocabulary at `date-types` and its concepts need two entries.
-
-   ```text
-   date-types.rst
-   date-types/
-   ```
-
-   A document of your own at a page address is kept and the build warns about it. A file whose
-   first line is not the extension's own comment is never overwritten or deleted.
+4. Add the generated pages to the site's table of contents and ignore them in version control,
+   as [Add vocabulary pages to a site](add-vocabulary-pages-to-a-site.md) shows.
 
 ## The result
 
