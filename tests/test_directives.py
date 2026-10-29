@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from docutils import nodes
-from rdflib import RDF, BNode, Graph, Literal, Namespace, URIRef
+from rdflib import DCTERMS, OWL, RDF, RDFS, BNode, Graph, Literal, Namespace, URIRef
 from sphinx.testing.util import SphinxTestApp
 
 BASE = "https://example.org/vocab/"
@@ -39,6 +39,15 @@ def page(address: str) -> str:
 
 def page_html(app: SphinxTestApp, address: str) -> str:
     return (Path(app.outdir) / address / "index.html").read_text(encoding="utf-8")
+
+
+def uri_links(app: SphinxTestApp, docname: str) -> list[tuple[str, str]]:
+    """Return the text and address of each link under the first resource's title."""
+    section = next(app.env.get_doctree(docname).findall(nodes.section))
+    return [
+        (reference.astext(), str(reference["refuri"]))
+        for reference in section[1].findall(nodes.reference)
+    ]
 
 
 class ElementNames(HTMLParser):
@@ -93,11 +102,14 @@ class TestConceptFacts:
         assert ["R1"] in paragraphs
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
-    def test_the_uri_appears_on_the_page(self, app: SphinxTestApp) -> None:
+    def test_the_uri_is_a_link_to_itself_under_the_title(
+        self, app: SphinxTestApp
+    ) -> None:
         app.build()
 
-        assert [BASE + "facts/rich"] in field_paragraphs(app, page("facts/rich"))
-        assert [BASE + "facts/bare"] in field_paragraphs(app, page("facts/bare"))
+        for name in ("facts/rich", "facts/bare"):
+            uri = BASE + name
+            assert uri_links(app, page(name)) == [(uri, uri)]
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_a_resource_without_facts_shows_only_its_uri_and_type(
@@ -105,10 +117,31 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        assert field_links(app, BASE + "facts/bare") == [
-            [],
-            [str(RDF.type), str(SKOS.Concept)],
-        ]
+        assert field_links(app, BASE + "facts/bare") == [[str(SKOS.Concept)]]
+
+    @pytest.mark.parametrize(
+        ("language", "expected"),
+        [
+            ("en", ["Wealthy (en)", "Plain", "Vermögend (de)"]),
+            ("de", ["Vermögend (de)", "Plain", "Wealthy (en)"]),
+        ],
+    )
+    def test_labels_in_the_site_language_come_first_then_the_rest_in_order(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        language: str,
+        expected: list[str],
+    ) -> None:
+        srcdir = tmp_path / language
+        shutil.copytree(rootdir / "test-facts", srcdir)
+        app = make_app("dirhtml", srcdir=srcdir, confoverrides={"language": language})
+
+        app.build()
+
+        field = field_named(app, page("facts/rich"), SKOS.altLabel)
+        assert [value.astext() for value in field[1].children] == expected
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_the_title_is_the_first_label_by_language_tag_then_text(
@@ -133,6 +166,71 @@ class TestConceptFacts:
         assert "b" not in parser.names
 
 
+def field_named(app: SphinxTestApp, docname: str, predicate: URIRef) -> nodes.field:
+    """Return the top-level field whose name links to ``predicate``."""
+    field_list = next(app.env.get_doctree(docname).findall(nodes.field_list))
+    return next(
+        field for field in field_list.children if name_links(field) == [str(predicate)]
+    )
+
+
+class TestFieldNames:
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    @pytest.mark.parametrize(
+        ("name", "predicate", "curie"),
+        [
+            ("rel/hub", SKOS.prefLabel, "skos:prefLabel"),
+            ("rel/hub", SKOS.inScheme, "skos:inScheme"),
+            ("rel/hub", SKOS.broader, "skos:broader"),
+            ("rel/hub", SKOS.narrower, "skos:narrower"),
+            ("rel/hub", SKOS.related, "skos:related"),
+            ("rel/hub", SKOS.exactMatch, "skos:exactMatch"),
+            ("rel/hub", SKOS.closeMatch, "skos:closeMatch"),
+            ("rel", SKOS.definition, "skos:definition"),
+            ("rel", DCTERMS.description, "dcterms:description"),
+            ("rel/col-a", SKOS.memberList, "skos:memberList"),
+            ("rel/col-b", SKOS.member, "skos:member"),
+        ],
+    )
+    def test_a_field_of_one_property_is_named_by_a_link_to_it(
+        self, app: SphinxTestApp, name: str, predicate: URIRef, curie: str
+    ) -> None:
+        app.build()
+
+        assert field_named(app, page(name), predicate)[0].astext() == curie
+
+    @pytest.mark.sphinx("dirhtml", testroot="facts")
+    @pytest.mark.parametrize(
+        "predicate", [SKOS.prefLabel, SKOS.altLabel, SKOS.definition, SKOS.notation]
+    )
+    def test_each_label_and_definition_field_links_its_property(
+        self, app: SphinxTestApp, predicate: URIRef
+    ) -> None:
+        app.build()
+
+        assert field_named(app, page("facts/rich"), predicate)
+
+    @pytest.mark.sphinx("dirhtml", testroot="properties")
+    @pytest.mark.parametrize(
+        ("name", "types"),
+        [
+            ("prop", [("skos:ConceptScheme", str(SKOS.ConceptScheme))]),
+            ("prop/item", [("skos:Concept", str(SKOS.Concept))]),
+            ("prop/group", [("skos:Collection", str(SKOS.Collection))]),
+        ],
+    )
+    def test_the_type_field_links_each_type_by_its_prefixed_name(
+        self, app: SphinxTestApp, name: str, types: list[tuple[str, str]]
+    ) -> None:
+        app.build()
+
+        field = field_named(app, page(name), RDF.type)
+        assert [
+            (reference.astext(), reference["refuri"])
+            for reference in field[1].findall(nodes.reference)
+        ] == types
+
+
 class TestFieldTranslation:
     @pytest.mark.sphinx("dirhtml", testroot="translation")
     def test_a_field_name_is_translated_and_a_label_equal_to_it_is_not(
@@ -143,18 +241,22 @@ class TestFieldTranslation:
         doctree = app.env.get_doctree(page("words/shared"))
         names = [name.astext() for name in doctree.findall(nodes.field_name)]
         bodies = [str(text) for text in doctree.findall(nodes.Text)]
-        assert "Bevorzugte Bezeichnungen" in names
-        assert "Preferred labels" not in names
-        assert "Preferred labels" in bodies
+        assert "Mitglied von" in names
+        assert "Member of" not in names
+        assert "Member of" in bodies
 
 
 class FieldLinks(HTMLParser):
-    """Collect the ``href`` of every link, one list for each field."""
+    """Collect the ``href`` of every link in a field's value, one list for each field.
+
+    The link a field's name makes to its property is left out.
+    """
 
     def __init__(self) -> None:
         super().__init__()
         self.fields: list[list[str]] = []
         self.depth = 0
+        self.naming = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = dict(attrs)
@@ -164,12 +266,20 @@ class FieldLinks(HTMLParser):
             self.depth += 1
         elif self.depth and tag == "dt":
             self.fields.append([])
-        elif self.depth and tag == "a" and attributes.get("href") is not None:
+            self.naming += 1
+        elif (
+            self.depth
+            and not self.naming
+            and tag == "a"
+            and attributes.get("href") is not None
+        ):
             self.fields[-1].append(str(attributes["href"]))
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "dl" and self.depth:
             self.depth -= 1
+        elif tag == "dt" and self.naming:
+            self.naming -= 1
 
 
 def field_links(app: SphinxTestApp, uri: str) -> list[list[str]]:
@@ -430,7 +540,7 @@ class TestVocabularyPage:
             for link in links
             if not link.startswith("http")
         ]
-        assert field_paragraphs(app, page("rel-empty"))[0] == [BASE + "rel-empty"]
+        assert uri_links(app, page("rel-empty")) == [(BASE + "rel-empty",) * 2]
         assert app.warning.getvalue() == ""
 
 
@@ -496,7 +606,7 @@ def shown_fields(app: SphinxTestApp, docname: str, uri: str) -> list[tuple[str, 
             ),
             None,
         )
-        if field_list is None or field_list[0].astext().split("\n\n")[-1] != uri:
+        if field_list is None or section[1].astext() != uri:
             continue
         for field in field_list.findall(nodes.field):
             if field.get("skos_download"):
@@ -718,34 +828,34 @@ class TestEveryProperty:
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
     @pytest.mark.parametrize(
-        ("name", "value"),
+        ("name", "value", "predicate"),
         [
-            ("prop", "https://example.org/agents/maker"),
-            ("prop", "https://example.org/agents/unnamed"),
-            ("prop", "https://creativecommons.org/licenses/by/4.0/"),
-            ("prop", "All rights reversed."),
-            ("prop", "2024-05-01"),
-            ("prop", "1.2.0"),
-            ("prop", "https://example.org/sources/book"),
-            ("prop", "https://example.org/elsewhere"),
-            ("prop", "Properties vocabulary"),
-            ("prop", "PROP-1"),
-            ("prop/item", "Use for items."),
-            ("prop/item", "A note."),
-            ("prop/item", "An example."),
-            ("prop/item", "Added in 2024."),
-            ("prop/item", "Check wording."),
-            ("prop/item", "Renamed."),
-            ("prop/group", "G1"),
-            ("prop/group", "https://example.org/agents/maker"),
+            ("prop", "https://example.org/agents/maker", DCTERMS.creator),
+            ("prop", "https://example.org/agents/unnamed", DCTERMS.publisher),
+            ("prop", "https://creativecommons.org/licenses/by/4.0/", DCTERMS.license),
+            ("prop", "All rights reversed.", DCTERMS.rights),
+            ("prop", "2024-05-01", DCTERMS.modified),
+            ("prop", "1.2.0", OWL.versionInfo),
+            ("prop", "https://example.org/sources/book", DCTERMS.source),
+            ("prop", "https://example.org/elsewhere", RDFS.seeAlso),
+            ("prop", "Properties vocabulary", DCTERMS.title),
+            ("prop", "PROP-1", DCTERMS.identifier),
+            ("prop/item", "Use for items.", SKOS.scopeNote),
+            ("prop/item", "A note.", SKOS.note),
+            ("prop/item", "An example.", SKOS.example),
+            ("prop/item", "Added in 2024.", SKOS.historyNote),
+            ("prop/item", "Check wording.", SKOS.editorialNote),
+            ("prop/item", "Renamed.", SKOS.changeNote),
+            ("prop/group", "G1", SKOS.notation),
+            ("prop/group", "https://example.org/agents/maker", DCTERMS.creator),
         ],
     )
-    def test_common_metadata_has_a_field_of_its_own(
-        self, app: SphinxTestApp, name: str, value: str
+    def test_common_metadata_is_named_by_a_link_to_its_property(
+        self, app: SphinxTestApp, name: str, value: str, predicate: URIRef
     ) -> None:
         app.build()
 
-        assert name_links(field_of(app, page(name), value)) == []
+        assert name_links(field_of(app, page(name), value)) == [str(predicate)]
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
     def test_each_metadata_property_has_a_separate_field(

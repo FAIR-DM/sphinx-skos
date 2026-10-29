@@ -154,6 +154,78 @@ class TestTableSettings:
         assert app.config.skos_vocabularies == []
         assert app.config.project != "From the table"
 
+    def test_the_title_also_names_the_site_in_the_theme(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": TABLE,
+                "docs/conf.py": "extensions = ['sphinx_skos']\n",
+            }
+        )
+
+        assert app.config.html_title == "From the table"
+
+    def test_an_html_title_set_in_conf_py_wins_over_the_title(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": TABLE,
+                "docs/conf.py": (
+                    "extensions = ['sphinx_skos']\nhtml_title = 'Own title'\n"
+                ),
+            }
+        )
+
+        assert app.config.project == "From the table"
+        assert app.config.html_title == "Own title"
+
+    def test_a_title_that_does_not_name_the_project_leaves_the_html_title(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": TABLE,
+                "docs/conf.py": (
+                    "extensions = ['sphinx_skos']\nproject = 'From conf'\n"
+                ),
+            }
+        )
+
+        assert "From the table" not in app.config.html_title
+
+    def test_a_logo_is_read_from_the_directory_of_the_table_and_published(
+        self, build_site: Build, tmp_path: Path
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": TABLE + 'logo = "brand/logo.svg"\n',
+                "docs/conf.py": "extensions = ['sphinx_skos']\n",
+                "brand/logo.svg": "<svg xmlns='http://www.w3.org/2000/svg'/>\n",
+            }
+        )
+
+        app.build()
+
+        assert app.config.html_logo == str(tmp_path / "brand/logo.svg")
+        assert (Path(app.outdir) / "_static" / "logo.svg").is_file()
+
+    def test_a_logo_set_in_conf_py_wins_over_the_table(
+        self, build_site: Build
+    ) -> None:
+        app = build_site(
+            {
+                "pyproject.toml": TABLE + 'logo = "brand/logo.svg"\n',
+                "docs/conf.py": (
+                    "extensions = ['sphinx_skos']\nhtml_logo = 'own.svg'\n"
+                ),
+                "docs/own.svg": "<svg xmlns='http://www.w3.org/2000/svg'/>\n",
+            }
+        )
+
+        assert app.config.html_logo == "own.svg"
+
     def test_a_site_with_no_pyproject_keeps_its_own_settings(
         self, build_site: Build
     ) -> None:

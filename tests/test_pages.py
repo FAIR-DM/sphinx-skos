@@ -1,5 +1,6 @@
 import shutil
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -248,6 +249,42 @@ def descendants(app: SphinxTestApp, docname: str) -> set[str]:
     return found
 
 
+class SidebarLinks(HTMLParser):
+    """Collect the ``href`` of every link in the navigation sidebar of a Furo page."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[str] = []
+        self.depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        if tag == "div" and (
+            self.depth or "sidebar-tree" in (attributes.get("class") or "").split()
+        ):
+            self.depth += 1
+        elif self.depth and tag == "a" and attributes.get("href") is not None:
+            self.links.append(str(attributes["href"]))
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "div" and self.depth:
+            self.depth -= 1
+
+
+def sidebar_links(app: SphinxTestApp, docname: str) -> list[str]:
+    parser = SidebarLinks()
+    parser.feed(Path(app.builder.get_outfilename(docname)).read_text(encoding="utf-8"))
+    return parser.links
+
+
+def addresses(app: SphinxTestApp, source: str, uris: list[str]) -> set[str]:
+    """Return the addresses the page ``source`` links the pages of ``uris`` by."""
+    pages = app.env.domains["skos"].pages
+    return {
+        app.builder.get_relative_uri(source, pages.docname_for(uri)) for uri in uris
+    }
+
+
 class TestVocabularyNavigation:
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_a_vocabulary_lists_its_concepts_then_its_collections(
@@ -328,6 +365,45 @@ class TestVocabularyNavigation:
                 "vocabularies/date-types/available", domain.pages.docname_for(uri)
             )
             assert target in nested
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_sidebar_opens_the_vocabulary_of_the_page_and_no_other(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        language = app.config.language
+        source = "vocabularies/date-types/available"
+        own = [
+            uri
+            for uri in domain.vocabularies.concepts_in(BASE + "date-types", language)
+            if uri != BASE + "date-types/available"
+        ]
+        other = domain.vocabularies.concepts_in(BASE + "methods", language)
+        links = set(sidebar_links(app, source))
+        assert other
+        assert addresses(app, source, own) <= links
+        assert not addresses(app, source, other) & links
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_front_page_sidebar_lists_every_vocabulary_but_no_concept(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        resources = domain.vocabularies.resources
+        language = app.config.language
+        vocabularies = [uri for uri, kind in resources.items() if kind == "vocabulary"]
+        concepts = [
+            concept
+            for vocabulary in vocabularies
+            for concept in domain.vocabularies.concepts_in(vocabulary, language)
+        ]
+        links = set(sidebar_links(app, "index"))
+        assert addresses(app, "index", vocabularies) <= links
+        assert not addresses(app, "index", concepts) & links
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_the_vocabulary_page_body_shows_no_toctree(
@@ -670,6 +746,18 @@ class TestFrontPage:
         assert app.env.titles["index"].astext() == "Front page site"
         assert app.env.toctree_includes["index"] == [INDEX, "guide", "more/deep"]
         assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx("dirhtml", testroot="no-front-page")
+    def test_the_front_page_lists_itself_first(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        toctree = next(app.env.get_doctree("index").findall(addnodes.toctree))
+        assert [target for _, target in toctree["entries"]] == [
+            "self",
+            INDEX,
+            "guide",
+            "more/deep",
+        ]
 
     @pytest.mark.sphinx("dirhtml", testroot="generated-only")
     def test_a_site_of_generated_pages_only_gets_a_front_page(

@@ -21,6 +21,9 @@ All notable changes to this project are recorded here. The format follows
   `vocabularies/date-types.ttl`.
 - A vocabulary's page lists the namespace prefixes its files declare, each linked to its
   namespace.
+- A `logo` key in the `[tool.sphinx-skos]` table sets `html_logo`, with the path read from the
+  directory of `pyproject.toml`.
+- The generated front page lists itself first, as "Home", so the navigation leads back to it.
 
 ### Changed
 
@@ -34,6 +37,24 @@ All notable changes to this project are recorded here. The format follows
 - Furo is installed with the package, and a site that sets no `html_theme` is built with it
   instead of alabaster. Set `html_theme = "alabaster"` to keep the old look, and remove theme
   options Furo does not accept.
+- **Breaking:** a field that shows one property is named by the property's prefixed name, linked
+  to the property, such as `skos:prefLabel`, `skos:inScheme` or `dcterms:creator`, instead of
+  words such as "Preferred labels". The fields that list resources keep words: Concepts,
+  Collections, Namespace prefixes, Member of and Download. A site's translations of the old field
+  names no longer apply.
+- **Breaking:** the resource's URI is no longer a field. It is shown as a link under the title,
+  and the first field is `rdf:type`, with each type linked by its prefixed name.
+- A vocabulary's Concepts, Collections and Namespace prefixes, and a concept's collections, now
+  named Member of, come last, just before Download.
+- A collection's members are named `skos:memberList` when it is ordered and `skos:member` when it
+  is not.
+- Labels and definitions in the site's `language` come first in their field.
+- The `title` key also sets `html_title`, unless the site sets it, so the sidebar shows the title
+  without "documentation".
+- The navigation keeps every top-level entry open and, below that, opens only the branch of the
+  page being read, instead of listing every concept of every vocabulary on every page.
+- `ResourceDirective.text_properties()` and `metadata_properties()` return properties only, and
+  `GeneratedPages.toctree_of()` takes `toctree` entries instead of document names.
 
 ## [v0.3.3] - 2026-10-29
 

@@ -21,7 +21,7 @@ Importance is a tag on each goal, not a ranking:
 | G3 | A page's address is its URI with the base URI removed, under the generated-pages directory, so a redirect from a resource's URI reaches its page with no lookup table | Essential | | |
 | G4 | A concept page shows what a reader needs to use the concept: its labels in every language, definition, notation, the collections it is in and its mapping links | Essential | | |
 | G5 | Any organisation can publish its vocabularies with it, with everything site-specific set in `pyproject.toml` or in the site's own `conf.py` | Essential | | |
-| G6 | A site's look and feel comes from its Sphinx theme, and the extension works under any theme; when the site chooses no theme, the theme is Furo | Essential | | Requests for logos, colours or layout options are answered by Sphinx's theme settings, not by this package |
+| G6 | A site's look and feel comes from its Sphinx theme, and the extension works under any theme; when the site chooses no theme, the theme is Furo | Essential | | Requests for colours or layout options are answered by Sphinx's theme settings, not by this package. A site's own title and logo can be named in its settings table, which passes them to Sphinx |
 | G7 | Software can find a page's RDF copies from the page itself | Expected | | |
 | G8 | The directives that build the generated pages can be used by hand in a site's prose pages | Expected | | |
 

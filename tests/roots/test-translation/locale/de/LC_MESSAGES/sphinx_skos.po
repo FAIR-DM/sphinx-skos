@@ -3,8 +3,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: de\n"
 
-msgid "Preferred labels"
-msgstr "Bevorzugte Bezeichnungen"
+msgid "Member of"
+msgstr "Mitglied von"
 
 msgid "Download"
 msgstr "Herunterladen"

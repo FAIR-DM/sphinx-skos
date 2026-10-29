@@ -2,4 +2,8 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
 <words/shared> a skos:Concept ;
-    skos:prefLabel "Preferred labels"@de .
+    skos:prefLabel "Member of"@de .
+
+<words/set> a skos:Collection ;
+    skos:prefLabel "Satz"@de ;
+    skos:member <words/shared> .

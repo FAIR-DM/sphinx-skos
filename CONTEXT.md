@@ -98,4 +98,5 @@ prefix.
 
 **Look and feel**
 Logos, colours, fonts and layout. Set by the site's Sphinx theme, never by this extension, which
-only chooses the default theme.
+only chooses the default theme and passes a site's own title and logo from its settings table to
+Sphinx.

@@ -33,6 +33,12 @@ warnings take part in Sphinx's warning handling, including `-W`.
   `<link rel="alternate">` element for each to the page's `metatags`. Under `dirhtml` a
   vocabulary's page also gets its whole-vocabulary files. Other pages are left alone.
 
+`collapse_navigation(app, pagename, templatename, context, doctree)`
+: Connected to Sphinx's `html-page-context` event, before the theme's own handlers. Replaces the
+  page's `toctree` template function with one that builds the same table of contents and drops
+  the children of every entry below the top level that is not on the current page's branch. See
+  [Navigation](settings.md#navigation).
+
 `release_shadowed_pages(app, config)`
 : Connected to Sphinx's `config-inited` event. Deletes each generated source beside a file of the
   site's own for the same document with another suffix, so that Sphinx does not warn about two
@@ -48,7 +54,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : Reads the site's [settings table](settings.md#the-pyprojecttoml-table) and chooses its default
   theme. `apply(app, config)` is connected to Sphinx's `config-inited` event, before Sphinx reads
   the theme: it sets each setting the table holds unless `conf.py` or `-D` set it, then sets
-  `html_theme` to `furo` unless the site set a theme. `find_table(confdir)` gives the table of
+  `html_theme` to `furo` unless the site set a theme. A `title` also sets `html_title`, and a
+  `logo` path is read from the table's directory. `find_table(confdir)` gives the table of
   the nearest `pyproject.toml` and its directory, or `None`. `set_by_site(config, name)` says
   whether `conf.py` or `-D` set a value, which comparing with the default cannot tell.
 
@@ -138,7 +145,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
   vocabulary and, hidden, the concepts and collections no vocabulary lists. `front_page_text()`
   gives the source of the front page, at `front_docname`, which exists only when the site has no
   document at `root_doc`: the `project` as title and a list of the index and then every document of
-  the site's own. `toctree_of(docnames, option)` gives a `toctree` directive listing documents.
+  the site's own. `toctree_of(entries, option)` gives a `toctree` directive listing entries, such
+  as `/vocabularies/index` or `Home <self>`.
   `write(srcdir)` writes the page sources, the index and the front page, each through `write_source(srcdir, docname, text, subject)`, which leaves a file of the site's own alone. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
   their output file, RDF copies, whole-vocabulary files (under `dirhtml`) and copied source.
@@ -173,15 +181,18 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 `ResourceDirective`
 : The base of the three directives. It takes a resource URI as its one argument. `fields(uri)`
-  returns the field list shown under the page title: the URI, then the fields `facts(uri)` gives,
-  which a subclass extends, then the fields of `metadata_properties()`, then `other_fields`
-  for every property no other field shows. `shown` names the properties a kind's own fields
-  show, so they are left out of the other fields. `text_properties()` and
-  `metadata_properties()` give the name of each labelled field and the property it shows, and
-  `property_facts(subject, properties)` reads them. `other_fields(subject, shown, seen)` builds
-  one field for each other property, named by a link to it. `values(values, seen)` gives the
+  returns the field list shown under the page title and the link to the resource's URI: the
+  `rdf:type` field, then the fields `facts(uri)` gives, which a subclass extends, then the fields
+  of `metadata_properties()`, then `other_fields` for every property no other field shows, then
+  the lists `listings(uri)` gives, which a subclass fills. `shown` names the properties a kind's
+  own fields show, so they are left out of the other fields. `text_properties()` and
+  `metadata_properties()` give the property of each of their fields, and
+  `property_facts(subject, properties)` reads them. `name_of(predicate)` gives the name of a
+  field that shows one property: its prefixed name, linked to it. `other_fields(subject, shown,
+  seen)` builds one field for each other property. `values(values, seen)` gives the
   paragraphs for the objects of a property, `literal_value(literal)` a literal's text and tag,
-  and `label_values(labels)` the paragraphs for labels with their languages.
+  and `label_values(labels)` the paragraphs for labels with their languages, those in the site's
+  `language` first.
   `field(name, *values)` builds one field, named by text or by a link; a list value is placed as it is. `link(uri)` shows a URI
   as a cross-reference to its page, as a link to itself by its `name` when it has no page, or as
   plain text when its scheme is `javascript`, `data` or `vbscript`; `uri_reference(uri, text)`
@@ -193,11 +204,13 @@ warnings take part in Sphinx's warning handling, including `-W`.
 `VocabularyDirective`, `ConceptDirective`, `CollectionDirective`
 : The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. Each shows every
   statement its resource carries except hidden labels, as the [directives
-  reference](directives.md#what-is-shown) sets out. A vocabulary adds links to its concepts and
-  collections and, from `prefix_list(uri)`, a bullet list of the namespace prefixes its files declare, a collection links to its members, and a concept links to its vocabulary,
-  collections, broader, narrower and related concepts, with one field for each mapping property
-  it uses. The names of the labelled fields are translated through the `sphinx_skos` message
-  catalogue.
+  reference](directives.md#what-is-shown) sets out. A vocabulary lists its concepts and
+  collections and, from `prefix_list(uri)`, a bullet list of the namespace prefixes its files
+  declare. A collection links to its members, under `skos:memberList` when it is ordered and
+  `skos:member` when it is not. A concept links to its vocabulary and its broader, narrower and
+  related concepts, with one field for each mapping property it uses, and lists the collections
+  it is a member of. The names of the fields that list resources are translated through the
+  `sphinx_skos` message catalogue.
 
 `DownloadLinks`
 : A Sphinx post-transform. As a page is resolved for writing, it points each link of the download

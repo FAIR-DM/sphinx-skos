@@ -3,11 +3,13 @@
 from importlib.metadata import version
 from typing import Any, cast
 
+from docutils import nodes
 from sphinx.application import Sphinx
 from sphinx.builders import Builder
 from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.config import Config
 from sphinx.environment import BuildEnvironment
+from sphinx.environment.adapters.toctree import global_toctree_for_doc
 from sphinx.project import Project
 from sphinx.util.typing import ExtensionMetadata
 
@@ -163,6 +165,51 @@ def find_outdated(
     return sorted(env.found_docs)
 
 
+def collapse_navigation(
+    app: Sphinx,
+    pagename: str,
+    templatename: str,
+    context: dict[str, Any],
+    doctree: nodes.document | None,
+) -> None:
+    """Open only the current page's branch below the top level of the navigation.
+
+    A vocabulary lists every concept and collection beneath it, so a site's
+    navigation would offer every vocabulary as a branch on every page. The
+    page's ``toctree`` function, which themes call to draw the navigation, is
+    replaced by one that builds the same table of contents, keeps the children
+    of a top-level entry, and keeps those of a deeper entry only when the reader
+    is on it or on one of its pages.
+
+    Args:
+        app: The Sphinx application building the site.
+        pagename: The page being written.
+        templatename: The page's template.
+        context: The page's template context.
+        doctree: The page's document, if it has one.
+    """
+    if "toctree" not in context:
+        return
+    builder = cast(StandaloneHTMLBuilder, app.builder)
+
+    def toctree(collapse: bool = True, **kwargs: Any) -> str:
+        # The same defaults as the builder's own toctree function.
+        kwargs.setdefault("includehidden", False)
+        if kwargs.get("maxdepth") == "":
+            kwargs.pop("maxdepth")
+        tree = global_toctree_for_doc(
+            app.env, pagename, builder, tags=builder.tags, collapse=collapse, **kwargs
+        )
+        for item in list(tree.findall(nodes.list_item)) if tree else []:
+            if not {"toctree-l1", "current"} & set(item["classes"]):
+                for branch in item.children[:]:
+                    if isinstance(branch, nodes.bullet_list):
+                        item.remove(branch)
+        return builder.render_partial(tree)["fragment"]
+
+    context["toctree"] = toctree
+
+
 def setup(app: Sphinx) -> ExtensionMetadata:
     """Register the extension with Sphinx.
 
@@ -186,6 +233,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)
+    app.connect("html-page-context", collapse_navigation, priority=400)
     return {
         "version": __version__,
         "parallel_read_safe": True,
