@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [v0.3.3] - 2026-10-29
+
 ### Fixed
 
 - A page's Turtle copy uses the prefix names its own vocabulary file declares, including the empty
