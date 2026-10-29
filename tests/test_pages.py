@@ -283,6 +283,54 @@ class TestCleanUp:
         assert not marked.exists()
 
 
+class TestUpgrade:
+    def build(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, site: Path
+    ) -> SphinxTestApp:
+        shutil.copytree(rootdir / "test-upgrade", site)
+        app = make_app("dirhtml", srcdir=site)
+        app.build()
+        return app
+
+    @staticmethod
+    def output(app: SphinxTestApp) -> dict[str, bytes]:
+        outdir = Path(app.outdir)
+        return {
+            path.relative_to(outdir).as_posix(): path.read_bytes()
+            for path in outdir.rglob("*")
+            if path.is_file() and path.suffix != ".inv"
+        }
+
+    def test_pages_an_earlier_version_wrote_at_the_old_addresses_are_removed(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+
+        app = self.build(make_app, rootdir, site)
+
+        assert not (site / "thing.rst").exists()
+        assert not (site / "thing" / "child.rst").exists()
+        assert (site / "thing" / "kept.rst").is_file()
+        assert (site / "notes.rst").is_file()
+        assert {"thing", "thing/child"}.isdisjoint(app.env.found_docs)
+        assert {"vocabularies/thing", "vocabularies/thing/child"} <= (
+            app.env.found_docs
+        )
+
+    def test_the_output_is_what_a_clean_build_gives(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        upgraded = self.build(make_app, rootdir, tmp_path / "upgraded")
+        clean = tmp_path / "clean"
+        shutil.copytree(rootdir / "test-upgrade", clean)
+        (clean / "thing.rst").unlink()
+        (clean / "thing" / "child.rst").unlink()
+        fresh = make_app("dirhtml", srcdir=clean)
+        fresh.build()
+
+        assert self.output(upgraded) == self.output(fresh)
+
+
 class TestUnusableAddresses:
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies", confoverrides=WITH_PROBLEMS)
     def test_a_resource_outside_the_base_uri_is_named_and_has_no_page(

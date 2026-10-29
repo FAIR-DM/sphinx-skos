@@ -1,0 +1,8 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/thing> a skos:ConceptScheme ;
+    skos:prefLabel "Things"@en .
+
+<https://example.org/vocab/thing/child> a skos:Concept ;
+    skos:inScheme <https://example.org/vocab/thing> ;
+    skos:prefLabel "Child"@en .
