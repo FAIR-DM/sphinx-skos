@@ -37,6 +37,16 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : The names of the site's own documents: every document in the source directory whose file does
   not start with the generated-page marker line.
 
+## Module `sphinx_skos.settings`
+
+`SiteSettings`
+: Reads the site's [settings table](settings.md#the-pyprojecttoml-table) and chooses its default
+  theme. `apply(app, config)` is connected to Sphinx's `config-inited` event, before Sphinx reads
+  the theme: it sets each setting the table holds unless `conf.py` or `-D` set it, then sets
+  `html_theme` to `furo` unless the site set a theme. `find_table(confdir)` gives the table of
+  the nearest `pyproject.toml` and its directory, or `None`. `set_by_site(config, name)` says
+  whether `conf.py` or `-D` set a value, which comparing with the default cannot tell.
+
 ## Module `sphinx_skos.vocabularies`
 
 `Vocabularies(patterns, confdir, base_uri)`

@@ -14,6 +14,7 @@ from sphinx_skos.copies import RdfCopies
 from sphinx_skos.directives import DownloadLinks
 from sphinx_skos.domain import SKOSDomain
 from sphinx_skos.pages import GeneratedPages
+from sphinx_skos.settings import SiteSettings
 from sphinx_skos.vocabularies import Vocabularies
 
 __version__ = version("sphinx-skos")
@@ -162,6 +163,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_config_value("skos_directory", "vocabularies", "env", types=[str])
     app.add_domain(SKOSDomain)
     app.add_post_transform(DownloadLinks)
+    app.connect("config-inited", SiteSettings.apply, priority=400)
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)

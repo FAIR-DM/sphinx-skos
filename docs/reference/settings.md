@@ -4,6 +4,38 @@ The settings sphinx-skos adds to a site's `conf.py`. A change to any of them reb
 site. To use them, follow [Publish vocabulary files as a
 site](../how-to/publish-vocabulary-files.md).
 
+## The pyproject.toml table
+
+A site can set `project`, `skos_base_uri`, `skos_vocabularies` and `skos_directory` in a
+`[tool.sphinx-skos]` table instead of in `conf.py`:
+
+```toml
+[tool.sphinx-skos]
+title = "Example vocabularies"
+base-uri = "https://example.org/vocab/"
+vocabularies = ["data/*.ttl"]
+directory = "vocabularies"
+```
+
+| Key            | Sets                |
+| -------------- | ------------------- |
+| `title`        | `project`           |
+| `base-uri`     | `skos_base_uri`     |
+| `vocabularies` | `skos_vocabularies` |
+| `directory`    | `skos_directory`    |
+
+The table is read from the nearest `pyproject.toml` at or above the directory that holds
+`conf.py`. The search stops at the first `pyproject.toml` it finds: if that file has no table,
+no setting comes from a file further up. A relative pattern in `vocabularies` is read from the
+directory of that `pyproject.toml`. A value that `conf.py` or `-D` sets wins over the table, even
+when it equals the default. A key the table does not know gives a build warning that names it.
+
+## Theme
+
+When the site sets no `html_theme`, in `conf.py` or with `-D`, the site is built with
+[Furo](https://pradyunsg.me/furo/), which sphinx-skos depends on. A site that sets any theme keeps
+it. The extension adds no stylesheet, script, static path or theme option.
+
 ## skos_vocabularies
 
 - **Type**: list of strings
