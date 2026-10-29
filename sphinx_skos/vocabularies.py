@@ -106,6 +106,7 @@ class Vocabularies:
     graph: Graph
     fingerprint: str
     resources: dict[str, Kind]
+    file_prefixes: dict[str, list[tuple[str, URIRef]]]
 
     def __init__(
         self, patterns: Sequence[str], confdir: str | Path, base_uri: str = ""
@@ -113,7 +114,7 @@ class Vocabularies:
         self.patterns = list(patterns)
         self.base_uri = base_uri
         self.graph = Graph()
-        self.file_prefixes: dict[str, list[tuple[str, URIRef]]] = {}
+        self.file_prefixes = {}
         digest = hashlib.sha256()
         for path in self.find_files(patterns, confdir):
             data = path.read_bytes() if path.is_file() else None
