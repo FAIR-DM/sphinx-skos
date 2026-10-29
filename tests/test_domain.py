@@ -98,7 +98,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        path = site / "vocabularies" / "methods.ttl"
+        path = site / "data" / "methods.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace("Survey", "Poll"),
             encoding="utf-8",
@@ -106,7 +106,7 @@ class TestRebuild:
 
         app = build(make_app, site)
 
-        assert app.env.titles["methods/survey"].astext() == "Poll"
+        assert app.env.titles["vocabularies/methods/survey"].astext() == "Poll"
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
@@ -116,7 +116,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        path = site / "vocabularies" / "methods.ttl"
+        path = site / "data" / "methods.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace(
                 '<methods/loose> a skos:Concept ;\n    skos:prefLabel "Loose"@en .\n',
@@ -132,7 +132,7 @@ class TestRebuild:
         assert not (
             Path(app.outdir) / "_sources" / "methods" / "loose.rst.txt"
         ).exists()
-        assert "methods/loose" not in app.env.found_docs
+        assert "vocabularies/methods/loose" not in app.env.found_docs
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
@@ -160,11 +160,11 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        (site / "vocabularies" / "added.ttl").write_text(ADDED, encoding="utf-8")
+        (site / "data" / "added.ttl").write_text(ADDED, encoding="utf-8")
 
         app = build(make_app, site)
 
-        assert {"added", "added/first"} <= app.env.found_docs
+        assert {"vocabularies/added", "vocabularies/added/first"} <= app.env.found_docs
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files
         assert doctrees(app, app.env.found_docs) == trees
@@ -191,7 +191,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        sources = sorted((site / "date-types").glob("*.rst"))
+        sources = sorted((site / "vocabularies" / "date-types").glob("*.rst"))
         before = {path: path.stat().st_mtime_ns for path in sources}
 
         build(make_app, site)
@@ -207,7 +207,7 @@ class TestRebuildLinks:
         site = tmp_path / "site"
         shutil.copytree(rootdir / "test-linked", site)
         build(make_app, site)
-        path = site / "vocabularies" / "b.ttl"
+        path = site / "data" / "b.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace("Before", "After"),
             encoding="utf-8",
@@ -215,7 +215,9 @@ class TestRebuildLinks:
 
         app = build(make_app, site)
 
-        links = list(app.env.get_doctree("link/from").findall(addnodes.pending_xref))
+        links = list(
+            app.env.get_doctree("vocabularies/link/from").findall(addnodes.pending_xref)
+        )
         assert [link.astext() for link in links] == ["After"]
         files, trees = clean_build(make_app, site, tmp_path)
         assert output_files(app) == files

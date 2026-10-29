@@ -1,0 +1,8 @@
+@prefix : <https://example.org/vocab/> .
+@prefix ex: <https://example.org/ns/two/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/vocab/shared/other> a skos:Concept ;
+    skos:inScheme <https://example.org/vocab/shared> ;
+    skos:prefLabel "Other"@en ;
+    ex:note "Stated in the second file" .

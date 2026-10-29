@@ -6,3 +6,4 @@ Faulty
    unknown
    missing
    wrongkind
+   vocabularies/index

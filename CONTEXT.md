@@ -8,16 +8,18 @@ SKOS terms are from the [SKOS Reference](https://www.w3.org/TR/skos-reference/).
 ## Glossary
 
 **Site**
-The Sphinx project that lists `sphinx_skos` in its `extensions`. It has its own `conf.py`, its own
-theme and its own prose pages. _Avoid_: project, portal (both mean other things in neighbouring
-packages).
+The Sphinx project that publishes vocabularies. It either lists `sphinx_skos` in the `extensions`
+of its own `conf.py`, or is built by `sphinx-skos build` from a `[tool.sphinx-skos]` table with no
+`conf.py` at all. It may have its own theme and its own prose pages. _Avoid_: project, portal
+(both mean other things in neighbouring packages).
 
 **Vocabulary**
 One SKOS concept scheme (`skos:ConceptScheme`) and the concepts in it. A site may publish several.
 _Avoid_: scheme on its own, thesaurus, taxonomy, ontology.
 
 **Vocabulary file**
-A Turtle file a site lists in `skos_vocabularies`. The source of truth for everything the
+A Turtle file a site lists in `skos_vocabularies` or in the `vocabularies` key of its settings
+table. The source of truth for everything the
 extension publishes. One file may hold one vocabulary or several. _Avoid_: input, data file.
 
 **Concept**
@@ -67,5 +69,33 @@ name, title.
 A link from a concept to a concept in another vocabulary: `skos:exactMatch`, `skos:closeMatch`,
 `skos:broadMatch`, `skos:narrowMatch` or `skos:relatedMatch`. _Avoid_: crosswalk, alignment.
 
+**Generated-pages directory**
+The directory in a site's source that holds every generated page and the index: `vocabularies/`
+unless `skos_directory` says otherwise. _Avoid_: output directory (that is where the built site
+goes).
+
+**Index**
+The page at the root of the generated-pages directory that lists every vocabulary. The one
+document a site adds to its own table of contents. _Avoid_: contents page, landing page.
+
+**Front page**
+The site's root page: the site's own when it has one, otherwise the one `sphinx-skos build`
+writes. _Avoid_: home page, landing page.
+
+**Whole-vocabulary file**
+A file holding a whole vocabulary in one of the four RDF formats, offered from the vocabulary's
+page. Not an RDF copy, which holds one resource. _Avoid_: dump, bulk export.
+
+**Download**
+A link on a page to that page's RDF in one format. _Avoid_: export.
+
+**Default theme**
+Furo, installed with the package and used when the site sets no theme.
+
+**Namespace prefix**
+A prefix and namespace URI pair declared in a vocabulary file. _Avoid_: abbreviation, CURIE
+prefix.
+
 **Look and feel**
-Logos, colours, fonts and layout. Set by the site's Sphinx theme, never by this extension.
+Logos, colours, fonts and layout. Set by the site's Sphinx theme, never by this extension, which
+only chooses the default theme.

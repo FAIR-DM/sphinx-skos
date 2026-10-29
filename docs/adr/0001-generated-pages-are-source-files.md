@@ -1,6 +1,6 @@
 # ADR 0001 — Generated pages are source files in the site's source directory
 
-**Status:** accepted
+**Status:** superseded by [ADR 0003](0003-generated-pages-have-their-own-directory.md)
 
 ## Decision
 

@@ -1,2 +1,2 @@
 extensions = ["sphinx_skos"]
-skos_vocabularies = ["vocabularies/*.ttl"]
+skos_vocabularies = ["data/*.ttl"]

@@ -1,13 +1,15 @@
 """Work out the page of every resource and write its source file."""
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from pathlib import Path
 
 from sphinx.builders import Builder
 from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.util import logging
+from sphinx.util.rst import escape
 
 from sphinx_skos.copies import RdfCopies
+from sphinx_skos.directives import translate
 from sphinx_skos.vocabularies import Kind, Vocabularies
 
 logger = logging.getLogger(__name__)
@@ -25,16 +27,25 @@ class GeneratedPages:
     Args:
         vocabularies: The site's vocabulary files.
         base_uri: The ``skos_base_uri`` setting.
+        directory: The ``skos_directory`` setting.
+        language: The site's ``language`` setting.
         source_suffix: The site's ``source_suffix`` setting.
         site_documents: The names of the documents the site wrote itself.
+        project: The site's ``project`` setting.
+        root_doc: The site's ``root_doc`` setting.
 
     Attributes:
+        index_docname: The generated index of the vocabularies, if there is one.
+        front_docname: The generated front page, if the site has no root document
+            of its own and pages are generated.
         docnames: The generated document of each resource, by URI.
         uris: The resource of each generated document, by document name.
         suffix: The file suffix of the generated sources, if the site has a
             reStructuredText one.
     """
 
+    index_docname: str | None
+    front_docname: str | None
     docnames: dict[str, str]
     uris: dict[str, str]
     suffix: str | None
@@ -43,10 +54,19 @@ class GeneratedPages:
         self,
         vocabularies: Vocabularies,
         base_uri: str,
+        directory: str,
+        language: str,
         source_suffix: Mapping[str, str],
         site_documents: Collection[str],
+        project: str,
+        root_doc: str,
     ) -> None:
         self.vocabularies = vocabularies
+        self.language = language
+        self.project = project
+        self.site_documents = sorted(site_documents)
+        self.index_docname = None
+        self.front_docname = None
         self.docnames = {}
         self.uris = {}
         self.suffix = self.find_suffix(source_suffix)
@@ -55,11 +75,20 @@ class GeneratedPages:
         if self.suffix is None:
             logger.warning("source_suffix has no reStructuredText suffix: no pages")
             return
-        if not self.has_base_uri(base_uri):
+        if not self.has_base_uri(base_uri) or not self.has_directory(directory):
             return
         taken = {self.compare_key(docname) for docname in site_documents}
+        if self.compare_key(root_doc) not in taken:
+            taken.add(self.compare_key(root_doc))
+            self.front_docname = root_doc
+        index = f"{directory}/index"
+        if self.compare_key(index) in taken:
+            logger.warning("The index %s is already used by a document", index)
+        else:
+            taken.add(self.compare_key(index))
+            self.index_docname = index
         for uri in sorted(vocabularies.resources):
-            docname = self.find_docname(uri, base_uri)
+            docname = self.find_docname(uri, base_uri, directory)
             if docname is None:
                 continue
             key = self.compare_key(docname)
@@ -87,6 +116,26 @@ class GeneratedPages:
             return True
         logger.warning("skos_vocabularies is set but skos_base_uri is not")
         return False
+
+    @staticmethod
+    def has_directory(directory: str) -> bool:
+        """Say whether pages can be placed in a directory, warning if they cannot.
+
+        Args:
+            directory: The ``skos_directory`` setting.
+
+        Returns:
+            Whether it is a relative path with no empty, ``.`` or ``..`` segment.
+        """
+        segments = directory.split("/")
+        if directory.startswith("/") or any(
+            segment in ("", ".", "..") for segment in segments
+        ):
+            logger.warning(
+                "skos_directory %r is not a relative directory: no pages", directory
+            )
+            return False
+        return True
 
     @staticmethod
     def find_suffix(source_suffix: Mapping[str, str]) -> str | None:
@@ -118,16 +167,17 @@ class GeneratedPages:
         return docname.removesuffix("/index")
 
     @staticmethod
-    def find_docname(uri: str, base_uri: str) -> str | None:
+    def find_docname(uri: str, base_uri: str, directory: str) -> str | None:
         """Return the document name of a resource, or warn why it has none.
 
         Args:
             uri: The resource's URI.
             base_uri: The ``skos_base_uri`` setting.
+            directory: The ``skos_directory`` setting.
 
         Returns:
-            The page address, with ``index`` added when it ends in a slash, or
-            ``None`` if the URI cannot be given a page.
+            The page address in the directory, with ``index`` added when it
+            ends in a slash, or ``None`` if the URI cannot be given a page.
         """
         if not uri.startswith(base_uri):
             logger.warning("%s is outside skos_base_uri and gets no page", uri)
@@ -147,7 +197,7 @@ class GeneratedPages:
         ):
             logger.warning("%s has no usable page address and gets no page", uri)
             return None
-        return address + "index" if address.endswith("/") else address
+        return f"{directory}/{address}" + ("index" if address.endswith("/") else "")
 
     def docname_for(self, uri: str) -> str | None:
         """Return the generated document of a resource.
@@ -180,9 +230,99 @@ class GeneratedPages:
             kind: The resource's kind.
 
         Returns:
-            The marker line, the orphan field and the resource's directive.
+            The marker line and the resource's directive. A vocabulary's
+            directive also holds, as its content, a hidden list of its concepts
+            and then its collections that have a page, so the list nests under
+            the vocabulary's title in the navigation.
         """
-        return f"{MARKER}\n\n:orphan:\n\n.. skos:{kind}:: {uri}\n"
+        text = f"{MARKER}\n\n.. skos:{kind}:: {uri}\n"
+        if kind == "vocabulary":
+            toctree = self.toctree_text(self.members_of(uri), ":hidden:")
+            text += "".join(
+                f"   {line}\n" if line else "\n" for line in toctree.splitlines()
+            )
+        return text
+
+    def members_of(self, vocabulary: str) -> list[str]:
+        """Return the concepts and then the collections of a vocabulary.
+
+        Args:
+            vocabulary: The vocabulary's URI.
+
+        Returns:
+            The URIs of those that have a page, in the order of the
+            vocabulary's own page.
+        """
+        found = [
+            *self.vocabularies.concepts_in(vocabulary, self.language),
+            *self.vocabularies.collections_in(vocabulary, self.language),
+        ]
+        return [uri for uri in found if uri in self.docnames]
+
+    def toctree_text(self, uris: Iterable[str], option: str) -> str:
+        """Return a ``toctree`` directive listing the pages of some resources.
+
+        Args:
+            uris: The resources to list, in order.
+            option: The directive option line, such as ``:hidden:``.
+
+        Returns:
+            The directive, or an empty string if there is nothing to list.
+        """
+        return self.toctree_of([self.docnames[uri] for uri in uris], option)
+
+    @staticmethod
+    def toctree_of(docnames: Iterable[str], option: str) -> str:
+        """Return a ``toctree`` directive listing documents.
+
+        Args:
+            docnames: The documents to list, in order.
+            option: The directive option line, such as ``:maxdepth: 1``.
+
+        Returns:
+            The directive, or an empty string if there is nothing to list.
+        """
+        entries = "".join(f"   /{docname}\n" for docname in docnames)
+        if not entries:
+            return ""
+        return f"\n.. toctree::\n   {option}\n\n{entries}"
+
+    def index_text(self) -> str:
+        """Return the source of the index page.
+
+        Returns:
+            The marker line, the translated title, a list of every vocabulary
+            with a page and a hidden list of the concepts and collections with
+            a page that no vocabulary lists.
+        """
+        title = translate("Vocabularies")
+        uris = self.vocabularies.sort_by_title(self.docnames, self.language)
+        kinds = self.vocabularies.resources
+        vocabularies = [uri for uri in uris if kinds[uri] == "vocabulary"]
+        listed = {
+            uri for vocabulary in vocabularies for uri in self.members_of(vocabulary)
+        }
+        unlisted = [
+            uri for uri in uris if kinds[uri] != "vocabulary" and uri not in listed
+        ]
+        return (
+            f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n"
+            + self.toctree_text(vocabularies, ":maxdepth: 1")
+            + self.toctree_text(unlisted, ":hidden:")
+        )
+
+    def front_page_text(self) -> str:
+        """Return the source of the front page.
+
+        Returns:
+            The marker line, the site's ``project`` as the title and a list of
+            the index and then every document of the site's own, by name.
+        """
+        title = escape(" ".join(self.project.split()))
+        listed = [self.index_docname] if self.index_docname else []
+        return f"{MARKER}\n\n{title}\n{'=' * len(title) * 2}\n" + self.toctree_of(
+            [*listed, *self.site_documents], ":maxdepth: 1"
+        )
 
     def write(self, srcdir: str | Path) -> None:
         """Write the source of every page into the source directory.
@@ -195,21 +335,39 @@ class GeneratedPages:
             srcdir: The site's source directory.
         """
         for uri, docname in self.docnames.items():
-            path = Path(srcdir) / f"{docname}{self.suffix}"
             text = self.source_text(uri, self.vocabularies.resources[uri])
-            if path.exists():
-                if not self.is_generated(path):
-                    logger.warning(
-                        "Page address %s of %s is a file of the site's own: "
-                        "the page is not written",
-                        docname,
-                        uri,
-                    )
-                    continue
-                if path.read_text(encoding="utf-8") == text:
-                    continue
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text, encoding="utf-8")
+            self.write_source(srcdir, docname, text, f"of {uri}")
+        if self.index_docname is not None:
+            self.write_source(srcdir, self.index_docname, self.index_text(), "")
+        if self.front_docname is not None:
+            self.write_source(srcdir, self.front_docname, self.front_page_text(), "")
+
+    def write_source(
+        self, srcdir: str | Path, docname: str, text: str, subject: str
+    ) -> None:
+        """Write one generated source unless it is already there or not ours.
+
+        Args:
+            srcdir: The site's source directory.
+            docname: The document to write.
+            text: The source to write.
+            subject: What the warning names beside the document when the file
+                is the site's own.
+        """
+        path = Path(srcdir) / f"{docname}{self.suffix}"
+        if path.exists():
+            if not self.is_generated(path):
+                logger.warning(
+                    "Page address %s %s is a file of the site's own: "
+                    "the page is not written",
+                    docname,
+                    subject,
+                )
+                return
+            if path.read_text(encoding="utf-8") == text:
+                return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
 
     def clean(
         self,
@@ -231,17 +389,70 @@ class GeneratedPages:
         """
         if self.suffix is None:
             return
-        source_root = Path(srcdir)
+        current = set(self.docnames.values()) | {
+            self.index_docname,
+            self.front_docname,
+        }
+        for path in self.find_generated(srcdir, [self.suffix], skip):
+            docname = path.relative_to(srcdir).as_posix().removesuffix(self.suffix)
+            if docname not in current:
+                path.unlink()
+                self.remove_output(docname, builder)
+
+    @classmethod
+    def find_generated(
+        cls,
+        srcdir: str | Path,
+        suffixes: Iterable[str],
+        skip: Collection[str | Path],
+    ) -> list[Path]:
+        """Find the sources in the source directory that the extension wrote.
+
+        Args:
+            srcdir: The site's source directory.
+            suffixes: The source suffixes to look for.
+            skip: Directories the build writes into, left unread when they sit
+                inside the source directory.
+
+        Returns:
+            The files whose first line is the marker, sorted by suffix and then
+            path.
+        """
         skipped = [Path(directory).resolve() for directory in skip]
-        current = set(self.docnames.values())
-        for path in sorted(source_root.rglob(f"*{self.suffix}")):
-            if any(path.resolve().is_relative_to(directory) for directory in skipped):
-                continue
-            docname = path.relative_to(source_root).as_posix().removesuffix(self.suffix)
-            if docname in current or not self.is_generated(path):
-                continue
-            path.unlink()
-            self.remove_output(docname, builder)
+        return [
+            path
+            for suffix in suffixes
+            for path in sorted(Path(srcdir).rglob(f"*{suffix}"))
+            if not any(
+                path.resolve().is_relative_to(directory) for directory in skipped
+            )
+            and cls.is_generated(path)
+        ]
+
+    @classmethod
+    def release_shadowed(
+        cls,
+        srcdir: str | Path,
+        suffixes: Collection[str],
+        skip: Collection[str | Path],
+    ) -> None:
+        """Delete the generated sources that a file of the site's own shadows.
+
+        A generated source and a file of the site's own with another suffix
+        are two files for one document.
+
+        Args:
+            srcdir: The site's source directory.
+            suffixes: The site's source suffixes.
+            skip: Directories the build writes into, left unread when they sit
+                inside the source directory.
+        """
+        for path in cls.find_generated(srcdir, suffixes, skip):
+            suffix = next(suffix for suffix in suffixes if path.name.endswith(suffix))
+            stem = str(path).removesuffix(suffix)
+            others = (Path(stem + other) for other in suffixes if other != suffix)
+            if any(other.is_file() and not cls.is_generated(other) for other in others):
+                path.unlink()
 
     @staticmethod
     def is_generated(path: Path) -> bool:
@@ -262,6 +473,8 @@ class GeneratedPages:
     def remove_output(self, docname: str, builder: Builder) -> None:
         """Delete what an HTML builder wrote for a document that is gone.
 
+        Under ``dirhtml`` that includes the whole-vocabulary files.
+
         Args:
             docname: The removed document.
             builder: The builder of the current build.
@@ -272,9 +485,11 @@ class GeneratedPages:
         if self.suffix != builder.config.html_sourcelink_suffix:
             copied += builder.config.html_sourcelink_suffix
         outfile = builder.get_outfilename(docname)
+        whole = RdfCopies.whole_paths(builder.outdir, docname)
         for path in (
             Path(outfile),
             *RdfCopies.paths(outfile),
+            *(whole if builder.name == "dirhtml" else []),
             Path(builder.outdir) / "_sources" / copied,
         ):
             path.unlink(missing_ok=True)

@@ -1,0 +1,16 @@
+@base <https://example.org/vocab/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<north> a skos:ConceptScheme ;
+    skos:prefLabel "North"@en .
+
+<south> a skos:ConceptScheme ;
+    skos:prefLabel "South"@en .
+
+<common/both> a skos:Concept ;
+    skos:prefLabel "Both"@en ;
+    skos:inScheme <north>, <south> .
+
+<common/north-only> a skos:Concept ;
+    skos:prefLabel "North only"@en ;
+    skos:inScheme <north> .

@@ -1,0 +1,6 @@
+Shared
+======
+
+.. toctree::
+
+   vocabularies/index

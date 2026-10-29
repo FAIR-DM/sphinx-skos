@@ -5,7 +5,7 @@ from babel.messages.pofile import read_po
 
 extensions = ["sphinx_skos"]
 language = "de"
-skos_vocabularies = ["vocabularies/*.ttl"]
+skos_vocabularies = ["data/*.ttl"]
 skos_base_uri = "https://example.org/vocab/"
 
 

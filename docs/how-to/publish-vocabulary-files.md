@@ -1,63 +1,58 @@
 # Publish vocabulary files as a site
 
-Turn a set of Turtle vocabulary files into a Sphinx site that has one page for every
+Turn a set of Turtle vocabulary files into a site that has a front page and one page for every
 vocabulary, concept and collection in them. Do this when the vocabulary files are finished
-enough to publish, or to see how they will look.
+enough to publish, or to see how they will look. You need no Sphinx knowledge and no `conf.py`.
 
 ## Before you start
 
-You need a Sphinx site with sphinx-skos installed in the same environment as Sphinx, and
-vocabulary files in Turtle (`.ttl`).
+You need sphinx-skos installed, and vocabulary files in Turtle (`.ttl`). Keep the files outside
+the `vocabularies/` directory: the build treats that directory as its own and the extension
+deletes generated files in it.
 
 ## Steps
 
-1. Add the extension and the two settings to the site's `conf.py`. The patterns in
-   [`skos_vocabularies`](../reference/settings.md#skos_vocabularies) are read from the
-   directory that holds `conf.py`. [`skos_base_uri`](../reference/settings.md#skos_base_uri) is
-   the start of every resource URI that the site's address replaces.
+1. Add a `[tool.sphinx-skos]` table to `pyproject.toml`, at the top of the project. The
+   `vocabularies` patterns are read from the directory that holds `pyproject.toml`.
+   [`base-uri`](../reference/settings.md#skos_base_uri) is the start of every resource URI that the
+   site's address replaces.
 
-   ```python
-   extensions = ["sphinx_skos"]
-   skos_vocabularies = ["vocabularies/*.ttl"]
-   skos_base_uri = "https://w3id.org/example/vocabularies/"
+   ```toml
+   [tool.sphinx-skos]
+   title = "Example vocabularies"
+   base-uri = "https://w3id.org/example/vocabularies/"
+   vocabularies = ["data/*.ttl"]
    ```
 
-2. Build the site with the `dirhtml` builder, which gives each page a directory of its own.
+2. Build the site from the same directory.
 
    ```console
-   sphinx-build -b dirhtml docs docs/_build/dirhtml
+   sphinx-skos build -W
    ```
 
-3. Check the build output. A concept with the URI
-   `https://w3id.org/example/vocabularies/date-types/available` has its page at
-   `date-types/available/index.html`. Every vocabulary, concept and collection in the files has a
-   page, and nothing else does.
+   The site is written to `_build/site/`. Pass `-o` to write it elsewhere. `-W` makes a warning
+   fail the build, which is what you want in a publishing job; leave it out to see the warnings
+   and still get a site.
 
-4. Link to a vocabulary from one of the site's own pages by listing its page address in a
-   `toctree`. The generated pages are not in any table of contents on their own, and Sphinx does
-   not warn about that.
+3. Check the build output. Open `_build/site/index.html`: it lists every vocabulary. A concept
+   with the URI `https://w3id.org/example/vocabularies/date-types/available` has its page at
+   `vocabularies/date-types/available/index.html`. Every vocabulary, concept and collection in
+   the files has a page, and nothing else does.
 
-   ````rst
-   .. toctree::
+4. Add `_build/` and `vocabularies/` to `.gitignore`, because both are produced by the build.
 
-      date-types
-   ````
+## Add pages of your own
 
-5. If the site's source directory is under version control, list the generated sources in
-   `.gitignore`. Every build writes them again, so they need not be kept. They sit at the page
-   addresses, so a vocabulary at `date-types` and its concepts need two entries.
-
-   ```text
-   date-types.rst
-   date-types/
-   ```
-
-   A document of your own at a page address is kept and the build warns about it. A file whose
-   first line is not the extension's own comment is never overwritten or deleted.
+Create a `docs/` directory and put prose pages in it. They join the site, and the front page
+links to them. If `docs/` has no front page, the build writes `docs/index.rst`, and you add that
+file to `.gitignore` as well, or write a front page of your own. To change any setting, or the theme, add a `docs/conf.py` that lists `sphinx_skos` in
+`extensions`; its values win over the table. See [Command](../reference/command.md) and
+[Settings](../reference/settings.md).
 
 ## The result
 
-The built site has a page for every resource at its page address. The build prints a warning for
-each resource that cannot get a page, naming it, so a build run with warnings as errors (`-W`)
-fails instead of leaving a page out. Fix a warning by correcting the URI in the vocabulary file,
-the base URI, or the name of your own page that is in the way.
+The built site has a front page and a page for every resource at its page address, in the Furo
+theme unless you chose another. The build prints a warning for each resource that cannot get a
+page, naming it, so a build run with `-W` fails instead of leaving a page out. Fix a warning by
+correcting the URI in the vocabulary file, the base URI, or the name of your own page that is in
+the way.

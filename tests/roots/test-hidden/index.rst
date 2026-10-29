@@ -1,2 +1,6 @@
 Hidden
 ======
+
+.. toctree::
+
+   vocabularies/index

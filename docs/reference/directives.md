@@ -11,7 +11,10 @@ with the same directives, so a page you write by hand shows the same fields and 
 | `skos:concept` | A concept |
 | `skos:collection` | A collection |
 
-Each takes the resource's URI as its one argument and has no content and no options.
+Each takes the resource's URI as its one argument and has no options. Content written under the
+directive goes inside the resource's section, after its fields, so a `toctree` there nests under
+the resource's title in a theme's navigation. A vocabulary's generated page uses this for its
+hidden list of concepts and collections.
 
 ```rst
 .. skos:concept:: https://w3id.org/example/vocabularies/date-types/available
@@ -42,8 +45,10 @@ The fields come in this order:
 | Directive | Fields of its kind, in order |
 |---|---|
 | `skos:concept` | vocabulary, collections, broader, narrower, related, one field for each mapping link the concept has |
-| `skos:vocabulary` | concepts, collections |
+| `skos:vocabulary` | concepts, collections, namespace prefixes |
 | `skos:collection` | members |
+
+A generated page ends with one more field, [Download](#download).
 
 How a value is shown depends on what it is:
 
@@ -61,10 +66,27 @@ Within a field, URIs come first, sorted by the text they show, then literals, so
 and then text, then blank nodes. An ordered collection's members keep the collection's order.
 Every page shows its fields and values in the same order on every build.
 
+## Namespace prefixes
+
+A vocabulary, on its generated page and written by hand alike, lists the namespace prefixes
+declared by the vocabulary files that state it. The field holds a bulleted list: each item is the
+prefix and a colon, followed by the namespace as a link. The empty prefix is shown as `:`. Pairs
+are listed once, sorted by prefix and then namespace, so a prefix that two files bind to different
+namespaces appears twice. A prefix that no file declares is not listed, including those that
+rdflib knows by default. The field is absent when the files declare none.
+
+## Download
+
+Every generated page ends with a field that links the page's RDF files, one link each for Turtle,
+JSON-LD, RDF/XML and N-Triples. A concept's and a collection's page link their own
+[RDF copies](rdf-copies.md). A vocabulary's page links its whole files under the `dirhtml` builder,
+and its own copies under the `html` builder. Any other builder, such as `singlehtml` or `text`,
+writes no copies, so it leaves the field out. A page written by hand has no download field.
+
 ## What is not written
 
-A directive written by hand writes no [RDF copies](rdf-copies.md) and adds no alternate links
-to the page. Only the resource's generated page has them. The page you write keeps all its own
+A directive written by hand writes no [RDF copies](rdf-copies.md), adds no alternate links
+to the page and has no download field. Only the resource's generated page has them. The page you write keeps all its own
 content, and the resource keeps its generated page.
 
 ## Warnings

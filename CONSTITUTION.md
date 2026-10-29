@@ -72,13 +72,14 @@ utilities that genuinely share no subject.
 
 ### Article X — Content, never look and feel
 The extension emits document content (docutils nodes) and RDF copies. It adds no stylesheet,
-script, HTML template, image, static file or theme option. Logos, colours, fonts and layout are
-set by the site through Sphinx's theme settings, and a change that adds any of them to this
-package is out of scope however it is asked for.
+script, HTML template, image, static file or theme option. It sets one default, `html_theme =
+"furo"`, for a site that sets no theme itself, and installs Furo for it. Logos, colours, fonts and
+layout are set by the site through Sphinx's theme settings, and a change that adds any of them to
+this package is out of scope however it is asked for.
 
 ### Article XI — Nothing site-specific in the package
 No organisation's URI, name, vocabulary or default appears in the package code. Everything a site
-needs to differ in comes from its `conf.py`. Test sites use example URIs, never a real
+needs to differ in comes from its `pyproject.toml` or its `conf.py`. Test sites use example URIs, never a real
 organisation's.
 
 ### Article XII — The vocabulary files are the truth
@@ -86,7 +87,8 @@ A resource's RDF copies contain its own RDF exactly as the vocabulary files stat
 added, dropped or rewritten. A page shows what the files say and nothing the files do not.
 
 ### Article XIII — Page addresses are stable
-A resource's page address is derived from its URI and the base URI, and from nothing else. A
+A resource's page address is its URI with the base URI removed, under the generated-pages
+directory. It depends on the URI, the base URI and that directory's name, and on nothing else. A
 change that moves any existing resource to a different address is a breaking change.
 
 ### Article XIV — Compatibility and stack
@@ -119,4 +121,4 @@ Read at plan and review. Applies to every change.
 
 ---
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-28
+**Version**: 1.1.0 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-10-29

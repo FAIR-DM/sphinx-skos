@@ -6,13 +6,16 @@ from typing import Any, cast
 from sphinx.application import Sphinx
 from sphinx.builders import Builder
 from sphinx.builders.html import StandaloneHTMLBuilder
+from sphinx.config import Config
 from sphinx.environment import BuildEnvironment
 from sphinx.project import Project
 from sphinx.util.typing import ExtensionMetadata
 
 from sphinx_skos.copies import RdfCopies
+from sphinx_skos.directives import DownloadLinks
 from sphinx_skos.domain import SKOSDomain
 from sphinx_skos.pages import GeneratedPages
+from sphinx_skos.settings import SiteSettings
 from sphinx_skos.vocabularies import Vocabularies
 
 __version__ = version("sphinx-skos")
@@ -43,6 +46,21 @@ def find_site_documents(app: Sphinx) -> set[str]:
     }
 
 
+def release_shadowed_pages(app: Sphinx, config: Config) -> None:
+    """Delete the generated sources that a document of the site's own shadows.
+
+    Sphinx reads the source directory before it announces the builder, and
+    warns when two files there are one document.
+
+    Args:
+        app: The Sphinx application building the site.
+        config: The site's configuration.
+    """
+    GeneratedPages.release_shadowed(
+        app.srcdir, config.source_suffix, [app.outdir, app.doctreedir]
+    )
+
+
 def generate_pages(app: Sphinx) -> None:
     """Load the vocabulary files and write the source of every page.
 
@@ -55,8 +73,12 @@ def generate_pages(app: Sphinx) -> None:
     pages = GeneratedPages(
         vocabularies,
         app.config.skos_base_uri,
+        app.config.skos_directory,
+        app.config.language,
         app.config.source_suffix,
         find_site_documents(app),
+        app.config.project,
+        app.config.root_doc,
     )
     pages.write(app.srcdir)
     pages.clean(app.srcdir, app.builder, [app.outdir, app.doctreedir])
@@ -74,6 +96,7 @@ def write_copies(
 ) -> None:
     """Write the RDF copies of a generated page and name them in its head.
 
+    Under ``dirhtml`` a vocabulary's page also gets its whole-vocabulary files.
     Pages the extension did not generate, and builders that do not write HTML,
     are left alone.
 
@@ -91,7 +114,13 @@ def write_copies(
     if uri is None:
         return
     outfile = cast(StandaloneHTMLBuilder, app.builder).get_outfilename(pagename)
-    RdfCopies(domain.vocabularies).write(uri, outfile)
+    copies = RdfCopies(domain.vocabularies)
+    copies.write(uri, outfile)
+    if (
+        app.builder.name == "dirhtml"
+        and domain.vocabularies.resources[uri] == "vocabulary"
+    ):
+        copies.write_whole(uri, app.outdir, pagename, app.config.language)
     context["metatags"] = context.get("metatags", "") + RdfCopies.alternate_links(
         outfile
     )
@@ -137,8 +166,9 @@ def find_outdated(
 def setup(app: Sphinx) -> ExtensionMetadata:
     """Register the extension with Sphinx.
 
-    Registers the ``skos_vocabularies`` and ``skos_base_uri`` settings, the
-    ``skos`` domain and the handlers that write the pages and their RDF copies.
+    Registers the ``skos_vocabularies``, ``skos_base_uri`` and ``skos_directory``
+    settings, the ``skos`` domain and the handlers that write the pages and
+    their RDF copies.
 
     Args:
         app: The Sphinx application building the site.
@@ -148,7 +178,11 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     """
     app.add_config_value("skos_vocabularies", [], "env", types=[list])
     app.add_config_value("skos_base_uri", "", "env", types=[str])
+    app.add_config_value("skos_directory", "vocabularies", "env", types=[str])
     app.add_domain(SKOSDomain)
+    app.add_post_transform(DownloadLinks)
+    app.connect("config-inited", SiteSettings.apply, priority=400)
+    app.connect("config-inited", release_shadowed_pages)
     app.connect("builder-inited", generate_pages)
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)

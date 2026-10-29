@@ -1,8 +1,65 @@
 # Settings
 
-The settings sphinx-skos adds to a site's `conf.py`. A change to either one rebuilds the whole
+The settings sphinx-skos adds to a site's `conf.py`. A change to any of them rebuilds the whole
 site. To use them, follow [Publish vocabulary files as a
 site](../how-to/publish-vocabulary-files.md).
+
+## The pyproject.toml table
+
+A site can set `project`, `skos_base_uri`, `skos_vocabularies` and `skos_directory` in a
+`[tool.sphinx-skos]` table instead of in `conf.py`. A site built with
+[`sphinx-skos build`](command.md) can have no `conf.py` at all, and then the table, with a title,
+a base URI and a list of vocabulary patterns, is the whole configuration:
+
+```toml
+[tool.sphinx-skos]
+title = "Example vocabularies"
+base-uri = "https://example.org/vocab/"
+vocabularies = ["data/*.ttl"]
+directory = "vocabularies"
+```
+
+| Key            | Sets                |
+| -------------- | ------------------- |
+| `title`        | `project`           |
+| `base-uri`     | `skos_base_uri`     |
+| `vocabularies` | `skos_vocabularies` |
+| `directory`    | `skos_directory`    |
+
+The table is read from the nearest `pyproject.toml` at or above the directory that holds
+`conf.py`, or above the current directory when the site has none. The search stops at the first `pyproject.toml` it finds: if that file has no table,
+no setting comes from a file further up. A relative pattern in `vocabularies` is read from the
+directory of that `pyproject.toml`. A value that `conf.py` or `-D` sets wins over the table, even
+when it equals the default. A key the table does not know gives a build warning that names it.
+
+## The order settings are read in
+
+For each of the four settings, the first source that sets it wins:
+
+1. `-D` on the Sphinx command line.
+2. The site's `conf.py`, even when it sets the value to the default.
+3. The `[tool.sphinx-skos]` table.
+4. The default.
+
+## Theme
+
+When the site sets no `html_theme`, in `conf.py` or with `-D`, the site is built with
+[Furo](https://pradyunsg.me/furo/), which sphinx-skos depends on. A site that sets any theme keeps
+it. The extension adds no stylesheet, script, static path or theme option. This holds whether the
+site is built with `sphinx-skos build` or with `sphinx-build`.
+
+## Front page
+
+When the site has no document at its `root_doc`, in any source suffix, and vocabulary pages are
+generated, the extension writes one. Its title is `project` and it lists the vocabularies index
+and then every other document of the site, sorted by name. A site that adds a front page of its
+own gets the generated one deleted on the next build.
+
+The front page is the one generated file outside the [generated-pages
+directory](#skos_directory). When the site has a `docs/` directory without a front page, it is
+written there at the site's root document, so a site that wants to keep it out of version
+control ignores it as well as the directory, or writes a front page of its own. Without `docs/`,
+the command's own source directory holds it and nothing needs ignoring.
 
 ## skos_vocabularies
 
@@ -49,3 +106,23 @@ A resource gets a build warning naming it, and no page, when:
 
 The site's own document is kept in every case, including a file that `exclude_patterns` hides
 from Sphinx: the page is not written over it and the warning names the address and the resource.
+
+## skos_directory
+
+- **Type**: string
+- **Default**: `"vocabularies"`
+
+The directory, inside the site's source directory, that holds every page the extension generates.
+A resource's page is at this directory followed by its page address, so with the default the
+concept `https://example.org/vocab/a/b` and the base URI `https://example.org/vocab/` give the
+page `vocabularies/a/b/`. The directory also holds an index page, `index`, that links every
+vocabulary and every concept and collection that has a page. List it in a `toctree`, as
+[Add vocabulary pages to a site](../how-to/add-vocabulary-pages-to-a-site.md) shows.
+
+The value is a relative path with `/` between its parts, such as `vocabularies` or
+`reference/terms`. When it is empty, starts with `/`, or has an empty, `.` or `..` part, the build
+gives one warning that names `skos_directory` and generates no page.
+
+Keep the vocabulary files outside this directory, which a site normally ignores in version
+control. The extension deletes a generated file in it when its resource goes, and a file of the
+site's own at a page's address stops that page from being written.

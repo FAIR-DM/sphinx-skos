@@ -1,11 +1,10 @@
+import shutil
+from collections.abc import Callable
 from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 from docutils import nodes
-import shutil
-from collections.abc import Callable
-
 from rdflib import RDF, BNode, Graph, Literal, Namespace, URIRef
 from sphinx.testing.util import SphinxTestApp
 
@@ -33,6 +32,11 @@ def has_tag(paragraph: list[str], text: str, tag: str) -> bool:
     )
 
 
+def page(address: str) -> str:
+    """Return the document name of the generated page at ``address``."""
+    return f"vocabularies/{address}"
+
+
 def page_html(app: SphinxTestApp, address: str) -> str:
     return (Path(app.outdir) / address / "index.html").read_text(encoding="utf-8")
 
@@ -53,7 +57,7 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        paragraphs = field_paragraphs(app, "facts/rich")
+        paragraphs = field_paragraphs(app, page("facts/rich"))
         for label, tag in [
             ("Rich", "en"),
             ("Reich", "de"),
@@ -66,13 +70,13 @@ class TestConceptFacts:
     def test_a_label_with_no_language_shows_no_tag(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert ["Plain"] in field_paragraphs(app, "facts/rich")
+        assert ["Plain"] in field_paragraphs(app, page("facts/rich"))
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_no_hidden_label_appears_on_the_page(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert "secretword" not in page_html(app, "facts/rich")
+        assert "secretword" not in page_html(app, page("facts/rich"))
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_both_definitions_with_their_languages_and_the_notation_appear(
@@ -80,7 +84,7 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        paragraphs = field_paragraphs(app, "facts/rich")
+        paragraphs = field_paragraphs(app, page("facts/rich"))
         for definition, tag in [
             ("Having much money.", "en"),
             ("Mit viel Geld.", "de"),
@@ -92,8 +96,8 @@ class TestConceptFacts:
     def test_the_uri_appears_on_the_page(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert [BASE + "facts/rich"] in field_paragraphs(app, "facts/rich")
-        assert [BASE + "facts/bare"] in field_paragraphs(app, "facts/bare")
+        assert [BASE + "facts/rich"] in field_paragraphs(app, page("facts/rich"))
+        assert [BASE + "facts/bare"] in field_paragraphs(app, page("facts/bare"))
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_a_resource_without_facts_shows_only_its_uri_and_type(
@@ -112,8 +116,8 @@ class TestConceptFacts:
     ) -> None:
         app.build()
 
-        assert app.env.titles["facts/reverse"].astext() == "Beta"
-        assert app.env.titles["facts/bare"].astext() == BASE + "facts/bare"
+        assert app.env.titles[page("facts/reverse")].astext() == "Beta"
+        assert app.env.titles[page("facts/bare")].astext() == BASE + "facts/bare"
 
     @pytest.mark.sphinx("dirhtml", testroot="facts")
     def test_a_label_holding_markup_is_escaped_and_makes_no_element(
@@ -122,7 +126,7 @@ class TestConceptFacts:
         app.build()
 
         parser = ElementNames()
-        html = page_html(app, "facts/markup")
+        html = page_html(app, page("facts/markup"))
         parser.feed(html)
 
         assert "&lt;b&gt;&amp;amp;&lt;/b&gt;" in html
@@ -136,7 +140,7 @@ class TestFieldTranslation:
     ) -> None:
         app.build()
 
-        doctree = app.env.get_doctree("words/shared")
+        doctree = app.env.get_doctree(page("words/shared"))
         names = [name.astext() for name in doctree.findall(nodes.field_name)]
         bodies = [str(text) for text in doctree.findall(nodes.Text)]
         assert "Bevorzugte Bezeichnungen" in names
@@ -169,16 +173,20 @@ class FieldLinks(HTMLParser):
 
 
 def field_links(app: SphinxTestApp, uri: str) -> list[list[str]]:
-    """Return the links of each field on the page of ``uri``."""
+    """Return the links of each field on the page of ``uri``, but the last.
+
+    The last field of a generated page is its download field, which has its own
+    tests.
+    """
     parser = FieldLinks()
-    parser.feed(page_html(app, uri.removeprefix(BASE)))
-    return parser.fields
+    parser.feed(page_html(app, page(uri.removeprefix(BASE))))
+    return parser.fields[:-1]
 
 
 def href(app: SphinxTestApp, source: str, target: str) -> str:
     """Return the address the page of ``source`` links to the page of ``target`` by."""
     return app.builder.get_relative_uri(
-        source.removeprefix(BASE), target.removeprefix(BASE)
+        page(source.removeprefix(BASE)), page(target.removeprefix(BASE))
     )
 
 
@@ -189,7 +197,7 @@ def hrefs(app: SphinxTestApp, source: str, targets: list[str]) -> list[str]:
 def graph_titles(rootdir: Path, testroot: str) -> dict[str, str]:
     """Return the English preferred label of every resource, read from the files."""
     graph = Graph()
-    for path in (rootdir / testroot / "vocabularies").glob("*.ttl"):
+    for path in (rootdir / testroot / "data").glob("*.ttl"):
         graph.parse(path)
     return {str(s): str(o) for s, o in graph.subject_objects(SKOS.prefLabel)}
 
@@ -300,9 +308,11 @@ class TestConceptLinks:
 
         hub = BASE + "rel/hub"
         address = href(app, hub, BASE + "rel-other/mapped")
-        target = Path(app.outdir) / "rel" / "hub" / address / "index.html"
+        target = (
+            Path(app.outdir) / "vocabularies" / "rel" / "hub" / address / "index.html"
+        )
         assert target.resolve() == (
-            Path(app.outdir) / "rel-other" / "mapped" / "index.html"
+            Path(app.outdir) / "vocabularies" / "rel-other" / "mapped" / "index.html"
         )
         assert target.resolve().is_file()
 
@@ -311,7 +321,7 @@ class TestConceptLinks:
         app.build()
 
         hub = BASE + "rel/hub"
-        html = page_html(app, "rel/hub")
+        html = page_html(app, page("rel/hub"))
         links = [link for fields in field_links(app, hub) for link in fields]
         assert "JaVaScript:alert(1)" in html
         assert "data:text/plain,x" in html
@@ -323,7 +333,7 @@ class TestConceptLinks:
     ) -> None:
         app.build()
 
-        assert ["plain text"] in field_paragraphs(app, "rel/hub")
+        assert ["plain text"] in field_paragraphs(app, page("rel/hub"))
 
     @pytest.mark.sphinx("dirhtml", testroot="relations")
     def test_a_concept_in_no_vocabulary_links_no_vocabulary(
@@ -355,7 +365,7 @@ class TestVocabularyPage:
     ) -> None:
         app.build()
 
-        paragraphs = field_paragraphs(app, "rel")
+        paragraphs = field_paragraphs(app, page("rel"))
         assert any(has_tag(p, "Relations", "en") for p in paragraphs)
         assert any(has_tag(p, "The relations.", "en") for p in paragraphs)
         assert any(has_tag(p, "Describes the relations.", "en") for p in paragraphs)
@@ -366,7 +376,7 @@ class TestVocabularyPage:
     ) -> None:
         app.build()
 
-        fields = list(app.env.get_doctree("rel").findall(nodes.field))
+        fields = list(app.env.get_doctree(page("rel")).findall(nodes.field))
         holding = [
             field
             for text in ("The relations.", "Describes the relations.")
@@ -420,7 +430,7 @@ class TestVocabularyPage:
             for link in links
             if not link.startswith("http")
         ]
-        assert field_paragraphs(app, "rel-empty")[0] == [BASE + "rel-empty"]
+        assert field_paragraphs(app, page("rel-empty"))[0] == [BASE + "rel-empty"]
         assert app.warning.getvalue() == ""
 
 
@@ -430,7 +440,8 @@ class TestCollectionPage:
         app.build()
 
         assert any(
-            has_tag(p, "Beta set", "en") for p in field_paragraphs(app, "rel/col-b")
+            has_tag(p, "Beta set", "en")
+            for p in field_paragraphs(app, page("rel/col-b"))
         )
 
     @pytest.mark.sphinx("dirhtml", testroot="relations")
@@ -488,6 +499,8 @@ def shown_fields(app: SphinxTestApp, docname: str, uri: str) -> list[tuple[str, 
         if field_list is None or field_list[0].astext().split("\n\n")[-1] != uri:
             continue
         for field in field_list.findall(nodes.field):
+            if field.get("skos_download"):
+                continue
             addresses = [
                 str(node.get("reftarget") or node.get("refuri"))
                 for node in field.findall(nodes.Element)
@@ -514,14 +527,14 @@ class TestHandWrittenDirectives:
 
         by_hand = shown_fields(app, "guide", BASE + name)
         assert len(by_hand) > 1
-        assert by_hand == shown_fields(app, name, BASE + name)
+        assert by_hand == shown_fields(app, page(name), BASE + name)
 
     @pytest.mark.sphinx("dirhtml", testroot="prose")
     def test_the_generated_pages_are_still_built(self, app: SphinxTestApp) -> None:
         app.build()
 
         for name in ("rel/hub", "rel", "rel/col-a"):
-            assert (Path(app.outdir) / name / "index.html").is_file()
+            assert (Path(app.outdir) / page(name) / "index.html").is_file()
 
     @pytest.mark.sphinx("dirhtml", testroot="prose")
     def test_only_generated_pages_have_copies_and_alternate_links(
@@ -530,8 +543,8 @@ class TestHandWrittenDirectives:
         app.build()
 
         for name in ("rel/hub", "rel", "rel/col-a"):
-            assert (Path(app.outdir) / name / "index.ttl").is_file()
-            assert 'rel="alternate"' in page_html(app, name)
+            assert (Path(app.outdir) / page(name) / "index.ttl").is_file()
+            assert 'rel="alternate"' in page_html(app, page(name))
         for name in ("guide", "sections"):
             assert not list((Path(app.outdir) / name).glob("index.[!h]*"))
             assert 'rel="alternate"' not in page_html(app, name)
@@ -595,7 +608,7 @@ PROPERTIES = ("prop", "prop/item", "prop/group")
 
 def properties_graph(rootdir: Path) -> Graph:
     graph = Graph()
-    graph.parse(rootdir / "test-properties" / "vocabularies" / "properties.ttl")
+    graph.parse(rootdir / "test-properties" / "data" / "properties.ttl")
     return graph
 
 
@@ -617,9 +630,7 @@ def field_of(app: SphinxTestApp, docname: str, value: str) -> nodes.field:
 
 def name_links(field: nodes.field) -> list[str]:
     """Return the addresses the field's name links to."""
-    return [
-        str(reference["refuri"]) for reference in field[0].findall(nodes.reference)
-    ]
+    return [str(reference["refuri"]) for reference in field[0].findall(nodes.reference)]
 
 
 def literal_texts(graph: Graph, node: URIRef | BNode) -> list[str]:
@@ -650,7 +661,7 @@ class TestEveryProperty:
         app.build()
 
         expected = literal_texts(properties_graph(rootdir), URIRef(BASE + name))
-        doctree = app.env.get_doctree(name)
+        doctree = app.env.get_doctree(page(name))
         shown = {
             str(text)
             for field_list in doctree.findall(nodes.field_list)
@@ -697,7 +708,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        doctree = app.env.get_doctree(name)
+        doctree = app.env.get_doctree(page(name))
         names = [
             field[0]
             for field in next(doctree.findall(nodes.field_list)).children
@@ -734,7 +745,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        assert name_links(field_of(app, name, value)) == []
+        assert name_links(field_of(app, page(name), value)) == []
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
     def test_each_metadata_property_has_a_separate_field(
@@ -743,7 +754,7 @@ class TestEveryProperty:
         app.build()
 
         values = ["2024-01-02", "2024-02-03", "2024-05-01", "1.2.0", "PROP-1"]
-        fields = [field_of(app, "prop", value).astext() for value in values]
+        fields = [field_of(app, page("prop"), value).astext() for value in values]
         assert len(set(fields)) == len(values)
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
@@ -752,7 +763,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        field = field_of(app, "prop", "https://example.org/agents/maker")
+        field = field_of(app, page("prop"), "https://example.org/agents/maker")
         references = [
             (reference.astext(), reference["refuri"])
             for reference in field[1].findall(nodes.reference)
@@ -766,7 +777,7 @@ class TestEveryProperty:
         app.build()
 
         unnamed = "https://example.org/agents/unnamed"
-        field = field_of(app, "prop", unnamed)
+        field = field_of(app, page("prop"), unnamed)
         assert [r.astext() for r in field[1].findall(nodes.reference)] == [unnamed]
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
@@ -783,7 +794,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        assert any(has_tag(p, text, tag) for p in field_paragraphs(app, "prop"))
+        assert any(has_tag(p, text, tag) for p in field_paragraphs(app, page("prop")))
 
     @pytest.mark.sphinx("dirhtml", testroot="properties")
     def test_a_blank_node_shows_its_own_statements_nested_in_the_field(
@@ -791,7 +802,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        field = field_of(app, "prop", "Ada Example")
+        field = field_of(app, page("prop"), "Ada Example")
         nested = list(field[1].findall(nodes.field_list))
         assert len(nested) == 3
         assert [n.astext().count("Example") for n in nested] == [1, 1, 1]
@@ -802,7 +813,7 @@ class TestEveryProperty:
     ) -> None:
         app.build()
 
-        field = field_of(app, "prop/item", "deep value")
+        field = field_of(app, page("prop/item"), "deep value")
         part = [
             node
             for node in field[1].findall(nodes.field_list)
@@ -827,8 +838,267 @@ class TestEveryProperty:
                 [
                     field.astext()
                     for name in PROPERTIES
-                    for field in app.env.get_doctree(name).findall(nodes.field)
+                    for field in app.env.get_doctree(page(name)).findall(nodes.field)
                 ]
             )
 
         assert shown[0] == shown[1]
+
+
+RDF_SUFFIXES = (".ttl", ".jsonld", ".rdf", ".nt")
+
+
+class RdfLinks(HTMLParser):
+    """Collect the ``href`` of every link to a file with an RDF suffix."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.hrefs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        href = dict(attrs).get("href")
+        if tag == "a" and href is not None and href.endswith(RDF_SUFFIXES):
+            self.hrefs.append(href)
+
+
+def rdf_links(page_file: Path) -> list[str]:
+    """Return the links in a built page that name an RDF file."""
+    parser = RdfLinks()
+    parser.feed(page_file.read_text(encoding="utf-8"))
+    return parser.hrefs
+
+
+def vocabulary_site(rootdir: Path, tmp_path: Path, name: str = "site") -> Path:
+    """Copy the test site that has several vocabularies, without its problems."""
+    site = tmp_path / name
+    shutil.copytree(rootdir / "test-vocabularies", site)
+    shutil.rmtree(site / "problems")
+    return site
+
+
+def built_page(app: SphinxTestApp, address: str) -> Path:
+    """Return the output file of a generated page."""
+    return Path(app.builder.get_outfilename(page(address)))
+
+
+def count_fields(app: SphinxTestApp, address: str) -> int:
+    """Return how many fields the page has once it is resolved for the builder."""
+    document = app.env.get_and_resolve_doctree(
+        page(address), app.builder, tags=app.builder.tags
+    )
+    return len(list(document.findall(nodes.field)))
+
+
+class TestDownloads:
+    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    @pytest.mark.parametrize(
+        "address", ["date-types/available", "date-types/by-origin"]
+    )
+    def test_a_concept_and_a_collection_link_their_four_copies_and_each_resolves(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        theme: str,
+        address: str,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("dirhtml", srcdir=site, confoverrides={"html_theme": theme})
+        app.build()
+
+        file = built_page(app, address)
+        links = rdf_links(file)
+        assert sorted(links) == sorted(f"index{suffix}" for suffix in RDF_SUFFIXES)
+        for link in links:
+            assert (file.parent / link).is_file()
+
+    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    def test_a_vocabulary_links_its_four_whole_files_and_each_resolves(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        theme: str,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("dirhtml", srcdir=site, confoverrides={"html_theme": theme})
+        app.build()
+
+        file = built_page(app, "date-types")
+        links = rdf_links(file)
+        assert sorted(links) == sorted(
+            f"../date-types{suffix}" for suffix in RDF_SUFFIXES
+        )
+        for link in links:
+            assert (file.parent / link).resolve().is_file()
+            assert (file.parent / link).resolve().parent == Path(
+                app.outdir
+            ) / "vocabularies"
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_a_page_written_by_hand_has_no_download_links(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        for name in ("guide", "sections"):
+            assert rdf_links(Path(app.outdir) / name / "index.html") == []
+        assert len(rdf_links(built_page(app, "rel/hub"))) == len(RDF_SUFFIXES)
+
+    def test_a_single_page_build_offers_no_download_links(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("singlehtml", srcdir=site)
+        app.build()
+
+        assert rdf_links(Path(app.outdir) / "index.html") == []
+
+    def test_html_then_dirhtml_over_one_doctree_directory_resolves_every_link(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        builddir = tmp_path / "build"
+        make_app("html", srcdir=site, builddir=builddir).build()
+        app = make_app("dirhtml", srcdir=site, builddir=builddir)
+        app.build()
+
+        for address in ("date-types", "date-types/available", "date-types/by-origin"):
+            file = built_page(app, address)
+            links = rdf_links(file)
+            assert len(links) == len(RDF_SUFFIXES)
+            for link in links:
+                assert (file.parent / link).resolve().is_file()
+
+    def test_under_html_every_page_links_its_own_copies(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        site = vocabulary_site(rootdir, tmp_path)
+        app = make_app("html", srcdir=site)
+        app.build()
+
+        for address in ("date-types", "date-types/available"):
+            file = built_page(app, address)
+            links = rdf_links(file)
+            assert len(links) == len(RDF_SUFFIXES)
+            for link in links:
+                assert (file.parent / link).is_file()
+
+    def test_a_text_build_has_no_download_field(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        shown = {}
+        for builder in ("text", "dirhtml"):
+            site = vocabulary_site(rootdir, tmp_path, builder)
+            app = make_app(builder, srcdir=site)
+            app.build()
+            shown[builder] = [
+                count_fields(app, address)
+                for address in ("date-types", "date-types/available")
+            ]
+
+        assert [
+            html - text
+            for html, text in zip(shown["dirhtml"], shown["text"], strict=True)
+        ] == [
+            1,
+            1,
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="translation")
+    def test_the_field_name_is_translated(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        document = app.env.get_doctree(page("words/shared"))
+        names = [name.astext() for name in document.findall(nodes.field_name)]
+        assert "Herunterladen" in names
+        assert "Download" not in names
+
+
+def prefix_items(app: SphinxTestApp, docname: str) -> list[tuple[str, str]]:
+    """Return each (prefix text, namespace link) of the bullet lists on a page."""
+    document = app.env.get_doctree(docname)
+    return [
+        (
+            item.children[0].children[0].astext().strip(),
+            next(item.findall(nodes.reference))["refuri"],
+        )
+        for bullets in document.findall(nodes.bullet_list)
+        for item in bullets.findall(nodes.list_item)
+    ]
+
+
+class TestNamespacePrefixes:
+    @pytest.mark.sphinx("dirhtml", testroot="clashing-prefixes")
+    def test_a_vocabulary_page_lists_each_declared_prefix_with_its_namespace_link(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert prefix_items(app, page("shared")) == [
+            (":", BASE),
+            ("ex:", "https://example.org/ns/one/"),
+            ("ex:", "https://example.org/ns/two/"),
+            ("skos:", str(SKOS)),
+        ]
+        html = page_html(app, page("shared"))
+        assert 'href="https://example.org/ns/two/"' in html
+
+    @pytest.mark.sphinx("dirhtml", testroot="clashing-prefixes")
+    def test_a_prefix_no_file_of_the_vocabulary_declares_is_not_listed(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        listed = {text for text, _ in prefix_items(app, page("shared"))}
+        assert "owl:" not in listed
+        assert "xsd:" not in listed
+        assert prefix_items(app, page("apart")) == [
+            ("owl:", "http://www.w3.org/2002/07/owl#"),
+            ("skos:", str(SKOS)),
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="clashing-prefixes")
+    def test_a_concept_page_lists_no_prefixes(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert prefix_items(app, page("shared/thing")) == []
+
+    def test_the_list_is_in_the_same_order_on_every_build(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+    ) -> None:
+        listed = []
+        for build in ("first", "second"):
+            srcdir = tmp_path / build
+            shutil.copytree(rootdir / "test-clashing-prefixes", srcdir)
+            app = make_app("dirhtml", srcdir=srcdir)
+            app.build()
+            listed.append(prefix_items(app, page("shared")))
+
+        assert listed[0] == listed[1]
+        assert len(listed[0]) == 4
+
+    @pytest.mark.sphinx("dirhtml", testroot="prose")
+    def test_a_vocabulary_written_by_hand_lists_its_prefixes(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        by_hand = prefix_items(app, "guide")
+        assert by_hand
+        assert by_hand == prefix_items(app, page("rel"))

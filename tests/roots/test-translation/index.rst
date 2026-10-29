@@ -1,2 +1,6 @@
 Facts
 =====
+
+.. toctree::
+
+   vocabularies/index

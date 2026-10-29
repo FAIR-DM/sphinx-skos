@@ -5,3 +5,6 @@ msgstr ""
 
 msgid "Preferred labels"
 msgstr "Bevorzugte Bezeichnungen"
+
+msgid "Download"
+msgstr "Herunterladen"

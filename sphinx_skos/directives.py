@@ -1,6 +1,8 @@
 """The directives that turn a resource's URI into content."""
 
 import re
+from os.path import relpath
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from docutils import nodes
@@ -8,10 +10,13 @@ from rdflib import DCTERMS, OWL, RDFS
 from rdflib.term import BNode, Node, URIRef
 from rdflib.term import Literal as RDFLiteral
 from sphinx import addnodes
+from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.locale import get_translation
+from sphinx.transforms.post_transforms import SphinxPostTransform
 from sphinx.util import logging
 from sphinx.util.docutils import SphinxDirective
 
+from sphinx_skos.copies import COPY_FORMATS, RdfCopies
 from sphinx_skos.vocabularies import (
     MAPPING_PROPERTIES,
     SKOS,
@@ -42,7 +47,7 @@ class ResourceDirective(SphinxDirective):
 
     required_arguments = 1
     optional_arguments = 0
-    has_content = False
+    has_content = True
     kind: ClassVar[Kind]
     # The properties the kind's own fields show, which the other properties
     # leave out.
@@ -61,7 +66,11 @@ class ResourceDirective(SphinxDirective):
         return cast("SKOSDomain", self.env.domains["skos"]).pages
 
     def run(self) -> list[nodes.Node]:
-        """Return a section titled with the resource, or warn why not."""
+        """Return a section titled with the resource, or warn why not.
+
+        The directive's content is parsed into the section, after the fields,
+        so a table of contents in it nests under the resource's title.
+        """
         uri = self.arguments[0]
         vocabularies = self.vocabularies
         if vocabularies.resources.get(uri) != self.kind:
@@ -78,6 +87,7 @@ class ResourceDirective(SphinxDirective):
         section["names"].append(nodes.fully_normalize_name(title))
         self.state.document.note_implicit_target(section)
         section += self.fields(uri)
+        section += self.parse_content_to_nodes()
         return [section]
 
     def fields(self, uri: str) -> nodes.field_list:
@@ -113,7 +123,26 @@ class ResourceDirective(SphinxDirective):
             }
         )
         field_list += self.other_fields(subject, shown, frozenset())
+        if self.pages.uri_for(self.env.docname) == uri:
+            field_list += self.download_field()
         return field_list
+
+    def download_field(self) -> nodes.field:
+        """Return the field that links a generated page's RDF files.
+
+        Each link names its format by suffix and has no target: the builder
+        that writes the page decides where the files are.
+
+        Returns:
+            A field with one link for each format.
+        """
+        links: list[list[nodes.Node]] = [
+            [nodes.reference("", copy.label, internal=True, skos_suffix=copy.suffix)]
+            for copy in COPY_FORMATS
+        ]
+        field = self.field(translate("Download"), *links)
+        field["skos_download"] = True
+        return field
 
     def facts(self, uri: str) -> Facts:
         """Return the facts every resource has, after its URI.
@@ -330,14 +359,15 @@ class ResourceDirective(SphinxDirective):
         Args:
             name: The field's name, already translated, or the nodes of a link.
             *values: The nodes of each paragraph. A value that is a field list
-                is placed as it is, not in a paragraph.
+                or a bullet list is placed as it is, not in a paragraph.
 
         Returns:
             The field.
         """
         body = [
             value[0]
-            if len(value) == 1 and isinstance(value[0], nodes.field_list)
+            if len(value) == 1
+            and isinstance(value[0], nodes.field_list | nodes.bullet_list)
             else nodes.paragraph("", "", *value)
             for value in values
         ]
@@ -406,7 +436,36 @@ class VocabularyDirective(ResourceDirective):
                 translate("Collections"),
                 self.links(vocabularies.collections_in(uri, language)),
             ),
+            (translate("Namespace prefixes"), self.prefix_list(uri)),
         ]
+
+    def prefix_list(self, uri: str) -> list[list[nodes.Node]]:
+        """Return a bullet list of the namespace prefixes the vocabulary declares.
+
+        Args:
+            uri: The vocabulary's URI.
+
+        Returns:
+            The list as the one value of a field, or nothing when the files of
+            the vocabulary declare no prefix. Each item is the prefix and a
+            colon, then a link to the namespace.
+        """
+        prefixes = self.vocabularies.declared_prefixes(uri, self.config.language)
+        if not prefixes:
+            return []
+        items = [
+            nodes.list_item(
+                "",
+                nodes.paragraph(
+                    "",
+                    "",
+                    nodes.Text(f"{prefix}: "),
+                    self.uri_reference(str(namespace), str(namespace)),
+                ),
+            )
+            for prefix, namespace in prefixes
+        ]
+        return [[nodes.bullet_list("", *items)]]
 
 
 class ConceptDirective(ResourceDirective):
@@ -488,3 +547,54 @@ class CollectionDirective(ResourceDirective):
         """
         members = self.vocabularies.members_of(uri, self.config.language)
         return [*super().facts(uri), (translate("Members"), self.links(members))]
+
+
+PAGE_BUILDERS = ("html", "dirhtml")
+
+
+class DownloadLinks(SphinxPostTransform):
+    """Point the download links of a generated page at the files they name.
+
+    The field is removed under a builder that does not write a page per
+    document, because the copies are written only beside such pages. A
+    vocabulary's page links its whole files under ``dirhtml`` and its own
+    copies otherwise; any other page links its own copies.
+    """
+
+    default_priority: ClassVar[int] = 10
+
+    def run(self, **kwargs: object) -> None:
+        """Set the target of each download link, or remove the field.
+
+        Args:
+            **kwargs: Passed on by Sphinx, unused.
+        """
+        fields = [
+            field
+            for field in self.document.findall(nodes.field)
+            if field.get("skos_download")
+        ]
+        # Sphinx's own post-transforms read the builder this way: the public
+        # ``app`` properties are deprecated.
+        builder = self.env._app.builder
+        if builder.name not in PAGE_BUILDERS:
+            for field in fields:
+                field.parent.remove(field)
+            return
+        docname = self.env.current_document.docname
+        domain = cast("SKOSDomain", self.env.domains["skos"])
+        uri = domain.pages.uri_for(docname) or ""
+        outfile = Path(cast(StandaloneHTMLBuilder, builder).get_outfilename(docname))
+        if builder.name == "dirhtml" and domain.vocabularies.resources.get(uri) == (
+            "vocabulary"
+        ):
+            files = RdfCopies.whole_paths(builder.outdir, docname)
+        else:
+            files = RdfCopies.paths(outfile)
+        targets = {
+            copy.suffix: Path(relpath(path, outfile.parent)).as_posix()
+            for copy, path in zip(COPY_FORMATS, files, strict=True)
+        }
+        for field in fields:
+            for reference in field.findall(nodes.reference):
+                reference["refuri"] = targets[reference["skos_suffix"]]

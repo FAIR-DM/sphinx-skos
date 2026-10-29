@@ -12,7 +12,8 @@ warnings take part in Sphinx's warning handling, including `-W`.
 ## Module `sphinx_skos`
 
 `setup(app)`
-: Registers the two settings, the `skos` domain and the build handlers. Sphinx calls it when the
+: Registers the three settings, the `skos` domain, the `DownloadLinks` post-transform and the
+  build handlers. Sphinx calls it when the
   site lists `sphinx_skos` in `extensions`.
 
 `generate_pages(app)`
@@ -29,11 +30,39 @@ warnings take part in Sphinx's warning handling, including `-W`.
 `write_copies(app, pagename, templatename, context, doctree)`
 : Connected to Sphinx's `html-page-context` event. For a page the extension generated, under a
   builder that writes HTML, it writes the page's [RDF copies](rdf-copies.md) and adds an
-  `<link rel="alternate">` element for each to the page's `metatags`. Other pages are left alone.
+  `<link rel="alternate">` element for each to the page's `metatags`. Under `dirhtml` a
+  vocabulary's page also gets its whole-vocabulary files. Other pages are left alone.
+
+`release_shadowed_pages(app, config)`
+: Connected to Sphinx's `config-inited` event. Deletes each generated source beside a file of the
+  site's own for the same document with another suffix, so that Sphinx does not warn about two
+  files for one document.
 
 `find_site_documents(app)`
 : The names of the site's own documents: every document in the source directory whose file does
   not start with the generated-page marker line.
+
+## Module `sphinx_skos.settings`
+
+`SiteSettings`
+: Reads the site's [settings table](settings.md#the-pyprojecttoml-table) and chooses its default
+  theme. `apply(app, config)` is connected to Sphinx's `config-inited` event, before Sphinx reads
+  the theme: it sets each setting the table holds unless `conf.py` or `-D` set it, then sets
+  `html_theme` to `furo` unless the site set a theme. `find_table(confdir)` gives the table of
+  the nearest `pyproject.toml` and its directory, or `None`. `set_by_site(config, name)` says
+  whether `conf.py` or `-D` set a value, which comparing with the default cannot tell.
+
+## Module `sphinx_skos.cli`
+
+`main(argv=None)`
+: The `sphinx-skos` command: parses the `build` subcommand and its options, builds the site of the
+  current directory and returns the exit code. `argv` is the command line without the program
+  name, `sys.argv` when omitted. See the [command reference](command.md).
+
+`SiteBuild(root, output, fail_on_warning)`
+: One build of the site that `root` holds. `run()` builds it with `dirhtml` and returns Sphinx's
+  exit code, or 2 when the project has neither a `[tool.sphinx-skos]` table nor a `docs/conf.py`.
+  `conf_py` is the path of the project's `docs/conf.py`, whether or not the file exists.
 
 ## Module `sphinx_skos.vocabularies`
 
@@ -68,6 +97,13 @@ warnings take part in Sphinx's warning handling, including `-W`.
   property points at or comes from. `listed_members(collection)` gives an ordered collection's
   members in list order and `all_members(collection)` every member it names.
 
+`Vocabularies.files`
+: Each file that could be read as its own `rdflib.Graph`, in file order, holding the prefixes that
+  file declares and no others. `vocabulary_files(uri, language)` gives the files with a statement
+  whose subject is a vocabulary or one of its concepts or collections, `vocabulary_graph(uri,
+  language)` the union of their graphs, and `declared_prefixes(uri, language)` the distinct
+  `(prefix, namespace)` pairs they declare, sorted by prefix and then namespace.
+
 `Vocabularies.own_rdf(uri)`
 : A resource's own RDF as a new graph: every triple with the resource as subject and those of the
   blank nodes they reach, with the namespace prefixes of the vocabulary files.
@@ -91,11 +127,24 @@ warnings take part in Sphinx's warning handling, including `-W`.
 
 ## Module `sphinx_skos.pages`
 
-`GeneratedPages(vocabularies, base_uri, source_suffix, site_documents)`
-: The page of every resource that can have one. `docname_for(uri)` gives a resource's document
-  name, or `None` when it has no page. `write(srcdir)` writes the page sources. `clean(srcdir,
+`GeneratedPages(vocabularies, base_uri, directory, language, source_suffix, site_documents, project, root_doc)`
+: The page of every resource that can have one, in the `skos_directory` directory.
+  `has_directory(directory)` says whether a directory is usable and warns when it is not.
+  `docname_for(uri)` gives a resource's document
+  name, or `None` when it has no page. `members_of(vocabulary)` gives the concepts and then the
+  collections of a vocabulary that have a page, and `toctree_text(uris, option)` gives a
+  `toctree` directive listing their pages; a vocabulary's source holds one, hidden.
+  `index_text()` gives the source of the index page, at `index_docname`, that lists every
+  vocabulary and, hidden, the concepts and collections no vocabulary lists. `front_page_text()`
+  gives the source of the front page, at `front_docname`, which exists only when the site has no
+  document at `root_doc`: the `project` as title and a list of the index and then every document of
+  the site's own. `toctree_of(docnames, option)` gives a `toctree` directive listing documents.
+  `write(srcdir)` writes the page sources, the index and the front page, each through `write_source(srcdir, docname, text, subject)`, which leaves a file of the site's own alone. `clean(srcdir,
   builder, skip)` deletes the generated sources whose resource is gone and, for an HTML builder,
-  their output file, RDF copies and copied source. `uri_for(docname)` gives the resource a
+  their output file, RDF copies, whole-vocabulary files (under `dirhtml`) and copied source.
+  `find_generated(srcdir, suffixes, skip)` lists the generated sources in a source directory and
+  `release_shadowed(srcdir, suffixes, skip)` deletes those that a file of the site's own with
+  another suffix shadows. `uri_for(docname)` gives the resource a
   generated document is the page of, or `None`; its `uris` attribute holds them all.
 
 ## Module `sphinx_skos.copies`
@@ -104,10 +153,13 @@ warnings take part in Sphinx's warning handling, including `-W`.
 : Writes the [RDF copies](rdf-copies.md) of a page. `write(uri, outfile)` serialises a resource's
   own RDF in every format beside the page's output file, `paths(outfile)` says where the copies
   of a page are and `alternate_links(outfile)` gives the `<link rel="alternate">` elements that
-  name them.
+  name them. `whole_paths(outdir, docname)` says where a vocabulary's whole files are and
+  `write_whole(uri, outdir, docname, language)` writes the graph of the vocabulary's files
+  there.
 
 `CopyFormat`, `COPY_FORMATS`
-: A format a copy is written in: `suffix`, `rdflib_format` and `media_type`. `COPY_FORMATS` lists
+: A format a copy is written in: `suffix`, `rdflib_format`, `media_type` and `label`, the name a
+  download link shows. `COPY_FORMATS` lists
   the four.
 
 ## Module `sphinx_skos.domain`
@@ -130,21 +182,31 @@ warnings take part in Sphinx's warning handling, including `-W`.
   one field for each other property, named by a link to it. `values(values, seen)` gives the
   paragraphs for the objects of a property, `literal_value(literal)` a literal's text and tag,
   and `label_values(labels)` the paragraphs for labels with their languages.
-  `field(name, *values)` builds one field, named by text or by a link. `link(uri)` shows a URI
+  `field(name, *values)` builds one field, named by text or by a link; a list value is placed as it is. `link(uri)` shows a URI
   as a cross-reference to its page, as a link to itself by its `name` when it has no page, or as
   plain text when its scheme is `javascript`, `data` or `vbscript`; `uri_reference(uri, text)`
   makes that last choice. `links(uris)` does so for each URI and `target_links(targets)` for each
-  `Target` of a mapping link. `vocabularies` is the `Vocabularies` of the build in progress and
+  `Target` of a mapping link. `download_field()` builds the last field of a generated page: a link
+  for each format of an RDF copy, with no target yet. `vocabularies` is the `Vocabularies` of the build in progress and
   `pages` its `GeneratedPages`.
 
 `VocabularyDirective`, `ConceptDirective`, `CollectionDirective`
 : The `skos:vocabulary`, `skos:concept` and `skos:collection` directives. Each shows every
   statement its resource carries except hidden labels, as the [directives
   reference](directives.md#what-is-shown) sets out. A vocabulary adds links to its concepts and
-  collections, a collection links to its members, and a concept links to its vocabulary,
+  collections and, from `prefix_list(uri)`, a bullet list of the namespace prefixes its files declare, a collection links to its members, and a concept links to its vocabulary,
   collections, broader, narrower and related concepts, with one field for each mapping property
   it uses. The names of the labelled fields are translated through the `sphinx_skos` message
   catalogue.
+
+`DownloadLinks`
+: A Sphinx post-transform. As a page is resolved for writing, it points each link of the download
+  field at the page's RDF copies, or at the vocabulary's whole files under `dirhtml`, relative to
+  the page, and removes the field under a builder that writes no page per document.
+
+`PAGE_BUILDERS`
+: The builders that write a page per document, `html` and `dirhtml`, and so the RDF copies the
+  download field links.
 
 `translate`
 : The function the directives pass their fixed text through: `sphinx.locale.get_translation`

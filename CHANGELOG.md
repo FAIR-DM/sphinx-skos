@@ -6,6 +6,35 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The `sphinx-skos build` command builds a site from a `[tool.sphinx-skos]` table in
+  `pyproject.toml`, with the `dirhtml` builder and no `conf.py`, into `_build/site/`. `-o` chooses
+  the output directory and `-W` makes a warning fail the build. A `docs/` directory adds pages of
+  the site's own, and a `docs/conf.py` is used as it is.
+- The `skos_directory` setting, `vocabularies` by default, names the directory that holds the
+  generated pages.
+- An index page, `vocabularies/index`, links every vocabulary. List it in a `toctree`.
+- Every generated page ends with a download field linking its RDF files. A vocabulary's page links
+  four whole files, holding the graph of the vocabulary files it comes from, written beside the
+  page's directory when the site is built with `dirhtml`, for example
+  `vocabularies/date-types.ttl`.
+- A vocabulary's page lists the namespace prefixes its files declare, each linked to its
+  namespace.
+
+### Changed
+
+- **Breaking:** generated pages are no longer at the root of the source directory. Every page
+  address now starts with `skos_directory`, so `date-types/available/` becomes
+  `vocabularies/date-types/available/`. Add a redirect from each old address. Keep vocabulary
+  files outside the directory, because it now holds only generated files.
+- Generated pages are no longer marked `:orphan:`. A site that lists no page that leads to the
+  index gets Sphinx's warning that the index is in no table of contents.
+- Pages that an earlier version wrote at the old addresses are deleted at the first build.
+- Furo is installed with the package, and a site that sets no `html_theme` is built with it
+  instead of alabaster. Set `html_theme = "alabaster"` to keep the old look, and remove theme
+  options Furo does not accept.
+
 ## [v0.3.3] - 2026-10-29
 
 ### Fixed

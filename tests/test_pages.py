@@ -3,6 +3,9 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from docutils import nodes
+from sphinx import addnodes
+from sphinx.environment.adapters.toctree import global_toctree_for_doc
 from sphinx.testing.util import SphinxTestApp
 
 from sphinx_skos.pages import MARKER
@@ -21,6 +24,8 @@ ADDRESSES = {
     "methods/survey",
     "methods/loose",
 }
+DOCNAMES = {f"vocabularies/{address}" for address in ADDRESSES}
+INDEX = "vocabularies/index"
 UNUSABLE = [
     BASE,
     BASE + "date-types#fragment",
@@ -31,7 +36,7 @@ UNUSABLE = [
     BASE + "empty//segment",
     BASE + "/rooted",
 ]
-WITH_PROBLEMS = {"skos_vocabularies": ["vocabularies/*.ttl", "problems/*.ttl"]}
+WITH_PROBLEMS = {"skos_vocabularies": ["data/*.ttl", "problems/*.ttl"]}
 
 
 def generated_sources(srcdir: Path) -> list[Path]:
@@ -57,9 +62,9 @@ class TestGeneratedPages:
     ) -> None:
         app.build()
 
-        assert app.env.found_docs - {"index"} == ADDRESSES
-        for address in ADDRESSES:
-            assert (Path(app.outdir) / address / "index.html").is_file()
+        assert app.env.found_docs - {"index", INDEX} == DOCNAMES
+        for docname in DOCNAMES:
+            assert (Path(app.outdir) / docname / "index.html").is_file()
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_a_clean_site_builds_without_warnings(self, app: SphinxTestApp) -> None:
@@ -73,16 +78,20 @@ class TestGeneratedPages:
     ) -> None:
         app.build()
 
-        assert "organisations/acme" not in app.env.found_docs
-        assert "references/smith-2020" not in app.env.found_docs
+        assert "vocabularies/organisations/acme" not in app.env.found_docs
+        assert "vocabularies/references/smith-2020" not in app.env.found_docs
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_a_page_is_titled_with_its_resource(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert app.env.titles["date-types/available"].astext() == "Available"
-        assert app.env.titles["date-types/markup"].astext() == "<b>&amp;</b>"
-        assert app.env.titles["date-types"].astext() == "Date types"
+        assert (
+            app.env.titles["vocabularies/date-types/available"].astext() == "Available"
+        )
+        assert (
+            app.env.titles["vocabularies/date-types/markup"].astext() == "<b>&amp;</b>"
+        )
+        assert app.env.titles["vocabularies/date-types"].astext() == "Date types"
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_the_sites_own_pages_are_unchanged_by_the_build(
@@ -102,12 +111,268 @@ class TestGeneratedPages:
         assert "toctree" not in app.warning.getvalue()
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
-    def test_a_site_toctree_can_list_a_vocabulary_by_its_address(
+    def test_a_site_toctree_can_list_the_index(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        assert app.env.toctree_includes["index"] == [INDEX]
+        assert app.warning.getvalue() == ""
+
+
+class TestGeneratedDirectory:
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_every_generated_page_is_under_the_default_directory_and_none_elsewhere(
         self, app: SphinxTestApp
     ) -> None:
         app.build()
 
-        assert app.env.toctree_includes["index"] == ["date-types"]
+        srcdir = Path(app.srcdir)
+        generated = generated_sources(srcdir)
+        assert generated
+        for path in generated:
+            assert path.relative_to(srcdir).parts[0] == "vocabularies"
+
+    @pytest.mark.sphinx(
+        "dirhtml", testroot="vocabularies", confoverrides={"skos_directory": "terms"}
+    )
+    def test_a_site_can_choose_the_directory(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        srcdir = Path(app.srcdir)
+        generated = generated_sources(srcdir)
+        assert generated
+        for path in generated:
+            assert path.relative_to(srcdir).parts[0] == "terms"
+        assert app.env.found_docs - {"index"} == {
+            f"terms/{address}" for address in {*ADDRESSES, "index"}
+        }
+
+    @pytest.mark.parametrize("directory", ["", "/abs", "a/../b"])
+    def test_an_unusable_directory_is_named_and_generates_no_page(
+        self,
+        make_app: Callable[..., SphinxTestApp],
+        rootdir: Path,
+        tmp_path: Path,
+        directory: str,
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+
+        app = make_app(
+            "dirhtml", srcdir=site, confoverrides={"skos_directory": directory}
+        )
+        app.build()
+
+        lines = [
+            line
+            for line in app.warning.getvalue().splitlines()
+            if "skos_directory" in line
+        ]
+        assert len(lines) == 1
+        assert generated_sources(site) == []
+
+
+class TestIndexPage:
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_index_links_every_vocabulary(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        vocabularies = {
+            domain.pages.docname_for(uri)
+            for uri, kind in domain.vocabularies.resources.items()
+            if kind == "vocabulary"
+        }
+        assert len(vocabularies) == 3
+        assert vocabularies <= set(app.env.toctree_includes[INDEX])
+        assert Path(app.builder.get_outfilename(INDEX)).is_file()
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_no_generated_source_is_orphan(self, app: SphinxTestApp) -> None:
+        app.build()
+
+        generated = generated_sources(Path(app.srcdir))
+        assert generated
+        for path in generated:
+            assert ":orphan:" not in path.read_text(encoding="utf-8")
+
+    @pytest.mark.sphinx("dirhtml", testroot="unlisted")
+    def test_a_site_that_does_not_list_the_index_gets_one_warning_naming_it(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        lines = app.warning.getvalue().splitlines()
+        assert len(lines) == 1
+        assert f"{INDEX}.rst" in lines[0]
+
+    @pytest.mark.sphinx("dirhtml", testroot="relations")
+    def test_a_concept_in_no_vocabulary_is_in_a_toctree_of_the_index(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert "vocabularies/rel/loose" in app.env.toctree_includes[INDEX]
+        assert app.warning.getvalue() == ""
+
+    def test_a_resource_at_the_address_index_is_a_collision_and_the_index_is_kept(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-vocabularies", site)
+        shutil.rmtree(site / "problems")
+        (site / "data" / "clash.ttl").write_text(
+            "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
+            f"<{BASE}index> a skos:Concept .\n",
+            encoding="utf-8",
+        )
+
+        app = make_app("dirhtml", srcdir=site)
+        app.build()
+
+        assert len(warnings_naming(app, BASE + "index")) == 1
+        source = (site / "vocabularies" / "index.rst").read_text(encoding="utf-8")
+        assert source.startswith(MARKER)
+        assert "skos:concept" not in source
+
+
+def descendants(app: SphinxTestApp, docname: str) -> set[str]:
+    """Return every document below ``docname`` in the table of contents."""
+    found: set[str] = set()
+    pending = list(app.env.toctree_includes.get(docname, []))
+    while pending:
+        child = pending.pop()
+        if child not in found:
+            found.add(child)
+            pending.extend(app.env.toctree_includes.get(child, []))
+    return found
+
+
+class TestVocabularyNavigation:
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_a_vocabulary_lists_its_concepts_then_its_collections(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        vocabulary = BASE + "date-types"
+        expected = [
+            domain.pages.docname_for(uri)
+            for uri in (
+                *domain.vocabularies.concepts_in(vocabulary, app.config.language),
+                *domain.vocabularies.collections_in(vocabulary, app.config.language),
+            )
+        ]
+        assert len(expected) == 6
+        assert app.env.toctree_includes["vocabularies/date-types"] == expected
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_every_concept_and_collection_is_below_its_vocabulary(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        resources = domain.vocabularies.resources
+        language = app.config.language
+        for vocabulary in (
+            uri for uri, kind in resources.items() if kind == "vocabulary"
+        ):
+            below = descendants(app, domain.pages.docname_for(vocabulary))
+            members = [
+                *domain.vocabularies.concepts_in(vocabulary, language),
+                *domain.vocabularies.collections_in(vocabulary, language),
+            ]
+            assert {domain.pages.docname_for(uri) for uri in members} <= below
+        assert "vocabularies/date-types/in-order" in descendants(app, INDEX)
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_navigation_nests_each_member_inside_its_vocabulary_entry(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        domain = app.env.domains["skos"]
+        vocabulary = BASE + "date-types"
+        navigation = global_toctree_for_doc(
+            app.env,
+            "vocabularies/date-types/available",
+            app.builder,
+            tags=app.builder.tags,
+            collapse=False,
+            includehidden=True,
+            titles_only=True,
+        )
+        assert navigation is not None
+        page = app.builder.get_relative_uri(
+            "vocabularies/date-types/available", "vocabularies/date-types"
+        )
+        entry = next(
+            item
+            for item in navigation.findall(nodes.list_item)
+            if any(
+                reference.get("refuri") == page
+                for reference in item[0].findall(nodes.reference)
+            )
+        )
+        nested = {
+            reference.get("refuri") for reference in entry.findall(nodes.reference)
+        }
+        members = [
+            *domain.vocabularies.concepts_in(vocabulary, app.config.language),
+            *domain.vocabularies.collections_in(vocabulary, app.config.language),
+        ]
+        for uri in members:
+            target = app.builder.get_relative_uri(
+                "vocabularies/date-types/available", domain.pages.docname_for(uri)
+            )
+            assert target in nested
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_vocabulary_page_body_shows_no_toctree(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        doctree = app.env.get_and_resolve_doctree(
+            "vocabularies/date-types", app.builder, tags=app.builder.tags
+        )
+        assert not list(doctree.findall(addnodes.toctree))
+        assert not [
+            node
+            for node in doctree.findall(nodes.compound)
+            if "toctree-wrapper" in node["classes"] and len(node.children)
+        ]
+
+    @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
+    def test_the_index_hides_only_resources_no_vocabulary_lists(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        listed = set(app.env.toctree_includes[INDEX])
+        assert listed == {
+            "vocabularies/date-types",
+            "vocabularies/methods",
+            "vocabularies/instruments",
+            "vocabularies/methods/loose",
+        }
+
+    @pytest.mark.sphinx("dirhtml", testroot="shared")
+    def test_a_concept_in_two_vocabularies_is_listed_by_both_without_warning(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        both = "vocabularies/common/both"
+        assert both in app.env.toctree_includes["vocabularies/north"]
+        assert both in app.env.toctree_includes["vocabularies/south"]
+        assert (
+            "vocabularies/common/north-only"
+            not in (app.env.toctree_includes["vocabularies/south"])
+        )
+        assert sum(docname == both for docname in app.env.found_docs) == 1
         assert app.warning.getvalue() == ""
 
 
@@ -128,9 +393,9 @@ class TestThemesAndBuilders:
         app.build()
 
         assert app.warning.getvalue() == ""
-        assert app.env.found_docs - {"index"} == ADDRESSES
-        for address in ADDRESSES:
-            assert (Path(app.outdir) / address / "index.html").is_file()
+        assert app.env.found_docs - {"index", INDEX} == DOCNAMES
+        for docname in DOCNAMES:
+            assert (Path(app.outdir) / docname / "index.html").is_file()
 
     @pytest.mark.sphinx("html", testroot="vocabularies")
     def test_the_html_builder_writes_each_page_at_the_file_it_gives_its_name(
@@ -139,8 +404,8 @@ class TestThemesAndBuilders:
         app.build()
 
         assert app.warning.getvalue() == ""
-        for address in ADDRESSES:
-            assert Path(app.builder.get_outfilename(address)).is_file()
+        for docname in DOCNAMES:
+            assert Path(app.builder.get_outfilename(docname)).is_file()
 
 
 class TestCleanUp:
@@ -161,6 +426,54 @@ class TestCleanUp:
         assert not marked.exists()
 
 
+class TestUpgrade:
+    def build(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, site: Path
+    ) -> SphinxTestApp:
+        shutil.copytree(rootdir / "test-upgrade", site)
+        app = make_app("dirhtml", srcdir=site)
+        app.build()
+        return app
+
+    @staticmethod
+    def output(app: SphinxTestApp) -> dict[str, bytes]:
+        outdir = Path(app.outdir)
+        return {
+            path.relative_to(outdir).as_posix(): path.read_bytes()
+            for path in outdir.rglob("*")
+            if path.is_file() and path.suffix != ".inv"
+        }
+
+    def test_pages_an_earlier_version_wrote_at_the_old_addresses_are_removed(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+
+        app = self.build(make_app, rootdir, site)
+
+        assert not (site / "thing.rst").exists()
+        assert not (site / "thing" / "child.rst").exists()
+        assert (site / "thing" / "kept.rst").is_file()
+        assert (site / "notes.rst").is_file()
+        assert {"thing", "thing/child"}.isdisjoint(app.env.found_docs)
+        assert {"vocabularies/thing", "vocabularies/thing/child"} <= (
+            app.env.found_docs
+        )
+
+    def test_the_output_is_what_a_clean_build_gives(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        upgraded = self.build(make_app, rootdir, tmp_path / "upgraded")
+        clean = tmp_path / "clean"
+        shutil.copytree(rootdir / "test-upgrade", clean)
+        (clean / "thing.rst").unlink()
+        (clean / "thing" / "child.rst").unlink()
+        fresh = make_app("dirhtml", srcdir=clean)
+        fresh.build()
+
+        assert self.output(upgraded) == self.output(fresh)
+
+
 class TestUnusableAddresses:
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies", confoverrides=WITH_PROBLEMS)
     def test_a_resource_outside_the_base_uri_is_named_and_has_no_page(
@@ -170,7 +483,7 @@ class TestUnusableAddresses:
 
         outside = "https://elsewhere.example.com/terms/outside"
         assert outside in app.warning.getvalue()
-        assert app.env.found_docs - {"index"} == ADDRESSES
+        assert app.env.found_docs - {"index", INDEX} == DOCNAMES
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies", confoverrides=WITH_PROBLEMS)
     @pytest.mark.parametrize("uri", UNUSABLE)
@@ -181,7 +494,7 @@ class TestUnusableAddresses:
 
         lines = warnings_naming(app, uri)
         assert len(lines) == 1
-        assert app.env.found_docs - {"index"} == ADDRESSES
+        assert app.env.found_docs - {"index", INDEX} == DOCNAMES
 
 
 class TestCollisions:
@@ -189,9 +502,13 @@ class TestCollisions:
     def test_the_sites_own_document_is_kept(self, app: SphinxTestApp) -> None:
         app.build()
 
-        own = (Path(app.srcdir) / "own.rst").read_text(encoding="utf-8")
+        own = (Path(app.srcdir) / "vocabularies" / "own.rst").read_text(
+            encoding="utf-8"
+        )
         assert own.startswith(":orphan:")
-        output = (Path(app.outdir) / "own" / "index.html").read_text(encoding="utf-8")
+        output = (Path(app.outdir) / "vocabularies" / "own" / "index.html").read_text(
+            encoding="utf-8"
+        )
         assert "Own page of the site" in output
 
     @pytest.mark.sphinx("dirhtml", testroot="collision")
@@ -211,7 +528,7 @@ class TestCollisions:
 
         lines = warnings_naming(app, BASE + "a/")
         assert len(lines) == 1
-        assert "a/index" not in app.env.found_docs
+        assert "vocabularies/a/index" not in app.env.found_docs
 
     @pytest.mark.sphinx("dirhtml", testroot="collision")
     def test_the_second_of_two_resources_at_one_address_is_named(
@@ -221,8 +538,8 @@ class TestCollisions:
 
         lines = warnings_naming(app, BASE + "x/")
         assert len(lines) == 1
-        assert "x" in app.env.found_docs
-        assert "x/index" not in app.env.found_docs
+        assert "vocabularies/x" in app.env.found_docs
+        assert "vocabularies/x/index" not in app.env.found_docs
 
     @pytest.mark.sphinx("dirhtml", testroot="collision")
     def test_a_resource_with_no_collision_still_has_its_page(
@@ -230,7 +547,7 @@ class TestCollisions:
     ) -> None:
         app.build()
 
-        assert "fine" in app.env.found_docs
+        assert "vocabularies/fine" in app.env.found_docs
 
 
 class TestHiddenSiteDocuments:
@@ -240,10 +557,11 @@ class TestHiddenSiteDocuments:
     ) -> None:
         app.build()
 
-        original = rootdir / "test-hidden" / "hidden.rst"
-        assert (Path(app.srcdir) / "hidden.rst").read_bytes() == original.read_bytes()
+        original = rootdir / "test-hidden" / "vocabularies" / "hidden.rst"
+        written = Path(app.srcdir) / "vocabularies" / "hidden.rst"
+        assert written.read_bytes() == original.read_bytes()
         assert len(warnings_naming(app, BASE + "hidden")) == 1
-        assert "shown" in app.env.found_docs
+        assert "vocabularies/shown" in app.env.found_docs
 
 
 class TestSiteSourceEncoding:
@@ -262,7 +580,7 @@ class TestSiteSourceEncoding:
         )
         app.build()
 
-        assert {"latin", "date-types"} <= app.env.found_docs
+        assert {"latin", "vocabularies/date-types"} <= app.env.found_docs
 
 
 class TestSourceSuffix:
@@ -272,8 +590,10 @@ class TestSourceSuffix:
     ) -> None:
         app.build()
 
-        assert {"one", "one/first"} <= app.env.found_docs
-        assert (Path(app.outdir) / "one" / "first" / "index.html").is_file()
+        assert {"vocabularies/one", "vocabularies/one/first"} <= app.env.found_docs
+        assert (
+            Path(app.outdir) / "vocabularies" / "one" / "first" / "index.html"
+        ).is_file()
         assert not list(Path(app.srcdir).rglob("*.rst"))
 
     @pytest.mark.sphinx(
@@ -328,10 +648,120 @@ class TestControlCharacters:
     ) -> None:
         app.build()
 
-        assert app.env.found_docs - {"index"} == {"plain"}
+        assert app.env.found_docs - {"index", INDEX} == {"vocabularies/plain"}
         assert [path.name for path in generated_sources(Path(app.srcdir))] == [
-            "plain.rst"
+            "index.rst",
+            "plain.rst",
         ]
         warnings = app.warning.getvalue()
         for start in ("carriage", "line", "with", "bell"):
             assert BASE + start in warnings
+
+
+class TestFrontPage:
+    BOTH_SUFFIXES = {".rst": "restructuredtext", ".md": "restructuredtext"}
+
+    @pytest.mark.sphinx("dirhtml", testroot="no-front-page")
+    def test_a_site_with_no_index_gets_a_front_page_listing_its_pages(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.titles["index"].astext() == "Front page site"
+        assert app.env.toctree_includes["index"] == [INDEX, "guide", "more/deep"]
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx("dirhtml", testroot="generated-only")
+    def test_a_site_of_generated_pages_only_gets_a_front_page(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.toctree_includes["index"] == [INDEX]
+        assert app.warning.getvalue() == ""
+        assert (Path(app.outdir) / "index.html").is_file()
+
+    @pytest.mark.sphinx(
+        "dirhtml",
+        testroot="no-front-page",
+        confoverrides={"project": "A *bold* `code` |sub| \\ title_"},
+    )
+    def test_a_project_name_holding_markup_is_shown_as_text(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.titles["index"].astext() == "A *bold* `code` |sub| \\ title_"
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx(
+        "dirhtml",
+        testroot="no-front-page",
+        confoverrides={"project": "  Spread\nover  lines "},
+    )
+    def test_a_project_name_with_surrounding_and_inner_line_breaks_stays_one_title(
+        self, app: SphinxTestApp
+    ) -> None:
+        app.build()
+
+        assert app.env.titles["index"].astext() == "Spread over lines"
+        assert app.warning.getvalue() == ""
+
+    @pytest.mark.sphinx(
+        "dirhtml",
+        testroot="suffix",
+        srcdir="suffix-with-its-own-index",
+        confoverrides={"exclude_patterns": ["_build"]},
+    )
+    def test_a_site_with_an_index_of_its_own_keeps_it_and_gets_no_front_page(
+        self, app: SphinxTestApp, rootdir: Path
+    ) -> None:
+        app.build()
+
+        original = rootdir / "test-suffix" / "index.txt"
+        assert (Path(app.srcdir) / "index.txt").read_bytes() == original.read_bytes()
+        assert generated_sources(Path(app.srcdir)) == [
+            Path(app.srcdir) / "vocabularies" / "index.txt",
+            Path(app.srcdir) / "vocabularies" / "one" / "first.txt",
+            Path(app.srcdir) / "vocabularies" / "one.txt",
+        ]
+        assert app.warning.getvalue() == ""
+
+    def test_an_index_of_another_suffix_than_the_pages_is_a_root_document(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-no-front-page", site)
+        (site / "index.md").write_text(
+            "Mine\n====\n\n.. toctree::\n\n   vocabularies/index\n   guide\n   more/deep\n",
+            encoding="utf-8",
+        )
+
+        app = make_app(
+            "dirhtml", srcdir=site, confoverrides={"source_suffix": self.BOTH_SUFFIXES}
+        )
+        app.build()
+
+        assert not (site / "index.rst").exists()
+        assert app.env.titles["index"].astext() == "Mine"
+        assert app.warning.getvalue() == ""
+
+    def test_a_front_page_is_removed_once_the_site_writes_an_index_of_its_own(
+        self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
+    ) -> None:
+        site = tmp_path / "site"
+        shutil.copytree(rootdir / "test-no-front-page", site)
+        (site / "index.rst").write_text(f"{MARKER}\n\nFront\n=====\n", encoding="utf-8")
+        (site / "index.md").write_text(
+            "Mine\n====\n\n.. toctree::\n\n   vocabularies/index\n   guide\n   more/deep\n",
+            encoding="utf-8",
+        )
+
+        app = make_app(
+            "dirhtml", srcdir=site, confoverrides={"source_suffix": self.BOTH_SUFFIXES}
+        )
+        app.build()
+
+        assert not (site / "index.rst").exists()
+        assert app.env.titles["index"].astext() == "Mine"
+        assert app.warning.getvalue() == ""

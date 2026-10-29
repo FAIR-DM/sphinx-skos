@@ -1,2 +1,6 @@
 Relations
 =========
+
+.. toctree::
+
+   vocabularies/index
