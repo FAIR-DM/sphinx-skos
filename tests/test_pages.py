@@ -31,7 +31,7 @@ UNUSABLE = [
     BASE + "empty//segment",
     BASE + "/rooted",
 ]
-WITH_PROBLEMS = {"skos_vocabularies": ["vocabularies/*.ttl", "problems/*.ttl"]}
+WITH_PROBLEMS = {"skos_vocabularies": ["data/*.ttl", "problems/*.ttl"]}
 
 
 def generated_sources(srcdir: Path) -> list[Path]:

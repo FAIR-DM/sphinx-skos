@@ -98,7 +98,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        path = site / "vocabularies" / "methods.ttl"
+        path = site / "data" / "methods.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace("Survey", "Poll"),
             encoding="utf-8",
@@ -116,7 +116,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        path = site / "vocabularies" / "methods.ttl"
+        path = site / "data" / "methods.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace(
                 '<methods/loose> a skos:Concept ;\n    skos:prefLabel "Loose"@en .\n',
@@ -160,7 +160,7 @@ class TestRebuild:
     ) -> None:
         site = copy_site(rootdir, tmp_path)
         build(make_app, site)
-        (site / "vocabularies" / "added.ttl").write_text(ADDED, encoding="utf-8")
+        (site / "data" / "added.ttl").write_text(ADDED, encoding="utf-8")
 
         app = build(make_app, site)
 
@@ -207,7 +207,7 @@ class TestRebuildLinks:
         site = tmp_path / "site"
         shutil.copytree(rootdir / "test-linked", site)
         build(make_app, site)
-        path = site / "vocabularies" / "b.ttl"
+        path = site / "data" / "b.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace("Before", "After"),
             encoding="utf-8",

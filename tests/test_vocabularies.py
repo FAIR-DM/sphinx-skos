@@ -115,7 +115,7 @@ class TestVocabulariesProblems:
     ) -> None:
         Vocabularies(app.config.skos_vocabularies, app.confdir)
 
-        assert "vocabularies/absent-*.ttl" in app.warning.getvalue()
+        assert "data/absent-*.ttl" in app.warning.getvalue()
 
     @pytest.mark.sphinx("dirhtml", testroot="unreadable")
     def test_a_file_that_is_not_turtle_is_named_in_a_warning(
@@ -294,7 +294,7 @@ class TestVocabulariesFacts:
 class TestVocabulariesRelations:
     @pytest.fixture
     def vocabularies(self, rootdir: Path) -> Vocabularies:
-        return Vocabularies(["vocabularies/*.ttl"], rootdir / "test-relations")
+        return Vocabularies(["data/*.ttl"], rootdir / "test-relations")
 
     def test_a_concepts_vocabularies_come_from_either_way_of_stating_them(
         self, vocabularies: Vocabularies
@@ -404,7 +404,7 @@ class TestVocabulariesRelations:
 class TestVocabulariesOwnRdf:
     @pytest.fixture
     def vocabularies(self, rootdir: Path) -> Vocabularies:
-        return Vocabularies(["vocabularies/*.ttl"], rootdir / "test-relations")
+        return Vocabularies(["data/*.ttl"], rootdir / "test-relations")
 
     def test_own_rdf_is_only_triples_with_the_resource_as_subject_or_in_its_lists(
         self, vocabularies: Vocabularies
@@ -429,7 +429,7 @@ class TestVocabulariesOwnRdf:
 class TestVocabulariesNames:
     @pytest.fixture
     def vocabularies(self, rootdir: Path) -> Vocabularies:
-        return Vocabularies(["vocabularies/*.ttl"], rootdir / "test-properties")
+        return Vocabularies(["data/*.ttl"], rootdir / "test-properties")
 
     def test_an_agent_is_named_by_its_foaf_name(
         self, vocabularies: Vocabularies

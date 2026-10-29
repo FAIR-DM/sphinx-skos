@@ -189,7 +189,7 @@ def hrefs(app: SphinxTestApp, source: str, targets: list[str]) -> list[str]:
 def graph_titles(rootdir: Path, testroot: str) -> dict[str, str]:
     """Return the English preferred label of every resource, read from the files."""
     graph = Graph()
-    for path in (rootdir / testroot / "vocabularies").glob("*.ttl"):
+    for path in (rootdir / testroot / "data").glob("*.ttl"):
         graph.parse(path)
     return {str(s): str(o) for s, o in graph.subject_objects(SKOS.prefLabel)}
 
@@ -595,7 +595,7 @@ PROPERTIES = ("prop", "prop/item", "prop/group")
 
 def properties_graph(rootdir: Path) -> Graph:
     graph = Graph()
-    graph.parse(rootdir / "test-properties" / "vocabularies" / "properties.ttl")
+    graph.parse(rootdir / "test-properties" / "data" / "properties.ttl")
     return graph
 
 

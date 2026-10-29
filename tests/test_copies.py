@@ -66,7 +66,7 @@ def copy_names(outdir: Path) -> list[str]:
 def read_files(rootdir: Path) -> Graph:
     """Read the test site's vocabulary files into one graph."""
     graph = Graph()
-    for path in sorted((rootdir / "test-vocabularies" / "vocabularies").glob("*.ttl")):
+    for path in sorted((rootdir / "test-vocabularies" / "data").glob("*.ttl")):
         graph.parse(path, format="turtle")
     return graph
 
@@ -216,7 +216,7 @@ class TestRdfCopies:
         app = make_app("dirhtml", srcdir=site)
         app.build()
         assert copy_file(app, "methods/loose", ".ttl").is_file()
-        path = site / "vocabularies" / "methods.ttl"
+        path = site / "data" / "methods.ttl"
         path.write_text(
             path.read_text(encoding="utf-8").replace(
                 '<methods/loose> a skos:Concept ;\n    skos:prefLabel "Loose"@en .\n',
