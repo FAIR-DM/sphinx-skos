@@ -90,7 +90,7 @@ page. Not an RDF copy, which holds one resource. _Avoid_: dump, bulk export.
 A link on a page to that page's RDF in one format. _Avoid_: export.
 
 **Default theme**
-Furo, installed with the package and used when the site sets no theme.
+sphinx-daisyui, installed with the package and used when the site sets no theme.
 
 **Namespace prefix**
 A prefix and namespace URI pair declared in a vocabulary file. _Avoid_: abbreviation, CURIE
@@ -99,4 +99,4 @@ prefix.
 **Look and feel**
 Logos, colours, fonts and layout. Set by the site's Sphinx theme, never by this extension, which
 only chooses the default theme, passes a site's own title and logo from its settings table to
-Sphinx, and links the site's own repository from Furo's footer.
+Sphinx, and links the site's own repository from the navigation bar of sphinx-daisyui.

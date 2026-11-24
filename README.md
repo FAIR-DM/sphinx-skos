@@ -53,7 +53,7 @@ sphinx-skos build
 ```
 
 The site is written to `_build/site/`, with a front page, a page for every vocabulary, concept and
-collection, and Furo as its theme. Add a `docs/` directory for prose pages of your own, or a
+collection, and sphinx-daisyui as its theme. Add a `docs/` directory for prose pages of your own, or a
 `docs/conf.py` to change any setting. A site that already has a `conf.py` can instead list
 `sphinx_skos` in its `extensions`, set `skos_vocabularies` and `skos_base_uri`, and build with
 `sphinx-build -b dirhtml`.
@@ -94,10 +94,10 @@ any vocabulary from any organisation.
 
 - **Not a theme.** Colours, fonts and layout come from Sphinx's own theme settings in your
   `conf.py`: `html_theme`, `html_theme_options` and the rest. The extension adds no
-  look-and-feel option. It installs [Furo](https://pradyunsg.me/furo/) and uses it when the site
+  look-and-feel option. It installs [sphinx-daisyui](https://github.com/SamuelJennings/sphinx-daisyui) and uses it when the site
   sets no theme, so a site looks finished without choosing one. A site's own title and logo can
   be named in the `[tool.sphinx-skos]` table, which passes them to Sphinx's `html_title` and
-  `html_logo`, and the repository URL in its `[project.urls]` is linked from Furo's footer. Requests to add a colour scheme or a layout option to this package will be closed
+  `html_logo`, and the repository URL in its `[project.urls]` is linked from the navigation bar of the default theme. Requests to add a colour scheme or a layout option to this package will be closed
   with a pointer to [Sphinx's HTML theming
   documentation](https://www.sphinx-doc.org/en/master/usage/theming.html).
 - **Not a vocabulary editor.** The Turtle files are the source. The extension reads them and

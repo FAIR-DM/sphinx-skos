@@ -31,7 +31,7 @@ repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
          pages: write
          id-token: write
        with:
-         packages: sphinx-skos==0.3.2 furo
+         packages: sphinx-skos==0.3.2 sphinx-daisyui
          deploy: ${{ github.event_name == 'push' }}
    ```
 

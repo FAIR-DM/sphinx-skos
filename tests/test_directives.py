@@ -1000,7 +1000,7 @@ def count_fields(app: SphinxTestApp, address: str) -> int:
 
 
 class TestDownloads:
-    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    @pytest.mark.parametrize("theme", ["alabaster", "daisyui"])
     @pytest.mark.parametrize(
         "address", ["date-types/available", "date-types/by-origin"]
     )
@@ -1022,7 +1022,7 @@ class TestDownloads:
         for link in links:
             assert (file.parent / link).is_file()
 
-    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    @pytest.mark.parametrize("theme", ["alabaster", "daisyui"])
     def test_a_vocabulary_links_its_four_whole_files_and_each_resolves(
         self,
         make_app: Callable[..., SphinxTestApp],

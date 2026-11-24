@@ -56,7 +56,7 @@ file to `.gitignore` as well, or write a front page of your own. To change any s
 
 ## The result
 
-The built site has a front page and a page for every resource at its page address, in the Furo
+The built site has a front page and a page for every resource at its page address, in the sphinx-daisyui
 theme unless you chose another. The build prints a warning for each resource that cannot get a
 page, naming it, so a build run with `-W` fails instead of leaving a page out. Fix a warning by
 correcting the URI in the vocabulary file, the base URI, or the name of your own page that is in

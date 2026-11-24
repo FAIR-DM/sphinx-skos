@@ -211,9 +211,7 @@ class TestTableSettings:
         assert app.config.html_logo == str(tmp_path / "brand/logo.svg")
         assert (Path(app.outdir) / "_static" / "logo.svg").is_file()
 
-    def test_a_logo_set_in_conf_py_wins_over_the_table(
-        self, build_site: Build
-    ) -> None:
+    def test_a_logo_set_in_conf_py_wins_over_the_table(self, build_site: Build) -> None:
         app = build_site(
             {
                 "pyproject.toml": TABLE + 'logo = "brand/logo.svg"\n',
@@ -240,17 +238,15 @@ class TestTableSettings:
 class TestTheme:
     CONF = "extensions = ['sphinx_skos']\n"
 
-    def test_a_site_that_sets_no_theme_is_built_with_furo(
+    def test_a_site_that_sets_no_theme_is_built_with_sphinx_daisyui(
         self, build_site: Build
     ) -> None:
         app = build_site({"docs/conf.py": self.CONF})
 
-        assert app.config.html_theme == "furo"
-        assert app.builder.theme.name == "furo"  # type: ignore[attr-defined]
+        assert app.config.html_theme == "daisyui"
+        assert app.builder.theme.name == "daisyui"  # type: ignore[attr-defined]
 
-    def test_a_theme_set_in_conf_py_is_kept(
-        self, build_site: Build
-    ) -> None:
+    def test_a_theme_set_in_conf_py_is_kept(self, build_site: Build) -> None:
         app = build_site({"docs/conf.py": self.CONF + "html_theme = 'classic'\n"})
 
         assert app.config.html_theme == "classic"
@@ -267,12 +263,12 @@ class TestTheme:
         app = build_site(
             {
                 "docs/conf.py": self.CONF
-                + "html_theme_options = {'sidebar_hide_name': True}\n"
+                + "html_theme_options = {'back_to_top_button': False}\n"
             }
         )
 
-        assert app.config.html_theme == "furo"
-        assert app.config.html_theme_options == {"sidebar_hide_name": True}
+        assert app.config.html_theme == "daisyui"
+        assert app.config.html_theme_options == {"back_to_top_button": False}
 
     def test_the_extension_adds_no_static_path_stylesheet_or_theme_option(
         self, build_site: Build
@@ -291,10 +287,10 @@ class TestRepositoryLink:
 
     @staticmethod
     def links(app: SphinxTestApp) -> list[str]:
-        icons = app.config.html_theme_options.get("footer_icons", [])
+        icons = app.config.html_theme_options.get("icon_links", [])
         return [icon["url"] for icon in icons]
 
-    def test_the_repository_url_is_a_footer_icon(self, build_site: Build) -> None:
+    def test_the_repository_url_is_an_icon_link(self, build_site: Build) -> None:
         app = build_site(
             {
                 "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
@@ -304,7 +300,7 @@ class TestRepositoryLink:
 
         assert self.links(app) == [self.URL]
 
-    def test_the_link_is_in_the_built_footer(self, build_site: Build) -> None:
+    def test_the_link_is_in_the_built_page(self, build_site: Build) -> None:
         app = build_site(
             {
                 "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
@@ -345,16 +341,15 @@ class TestRepositoryLink:
 
         assert self.links(app) == [self.URL]
 
-    def test_footer_icons_the_site_sets_win(self, build_site: Build) -> None:
+    def test_icon_links_the_site_sets_win(self, build_site: Build) -> None:
         app = build_site(
             {
                 "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
-                "docs/conf.py": self.CONF
-                + "html_theme_options = {'footer_icons': []}\n",
+                "docs/conf.py": self.CONF + "html_theme_options = {'icon_links': []}\n",
             }
         )
 
-        assert app.config.html_theme_options == {"footer_icons": []}
+        assert app.config.html_theme_options == {"icon_links": []}
 
     def test_other_theme_options_the_site_sets_are_kept(
         self, build_site: Build
@@ -363,11 +358,11 @@ class TestRepositoryLink:
             {
                 "pyproject.toml": f'[project.urls]\nRepository = "{self.URL}"\n',
                 "docs/conf.py": self.CONF
-                + "html_theme_options = {'sidebar_hide_name': True}\n",
+                + "html_theme_options = {'back_to_top_button': False}\n",
             }
         )
 
-        assert app.config.html_theme_options["sidebar_hide_name"] is True
+        assert app.config.html_theme_options["back_to_top_button"] is False
         assert self.links(app) == [self.URL]
 
     def test_another_theme_gets_no_link(self, build_site: Build) -> None:
@@ -395,9 +390,13 @@ class TestRepositoryLink:
 
 
 class TestDependencies:
-    def test_furo_is_a_requirement_without_an_extra(self) -> None:
+    def test_sphinx_daisyui_is_a_requirement_without_an_extra(self) -> None:
         requirements = [Requirement(line) for line in requires("sphinx-skos") or []]
 
-        furo = [requirement for requirement in requirements if requirement.name == "furo"]
-        assert len(furo) == 1
-        assert furo[0].marker is None
+        daisyui = [
+            requirement
+            for requirement in requirements
+            if requirement.name == "sphinx-daisyui"
+        ]
+        assert len(daisyui) == 1
+        assert daisyui[0].marker is None
