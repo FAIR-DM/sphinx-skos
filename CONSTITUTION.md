@@ -135,4 +135,4 @@ Read at plan and review. Applies to every change.
 
 ---
 
-**Version**: 1.3.1 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-11-11
+**Version**: 1.3.2 | **Ratified**: 2026-10-28 | **Last Amended**: 2026-11-24
