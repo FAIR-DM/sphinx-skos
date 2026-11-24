@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** a site that sets no `html_theme` is now built with
+  [sphinx-daisyui](https://github.com/SamuelJennings/sphinx-daisyui) instead of Furo, and
+  sphinx-daisyui replaces Furo as a dependency. A site that wants Furo installs it and sets
+  `html_theme = "furo"` itself, and removes any `html_theme_options` that Furo alone accepts.
+- The repository link from `[project.urls]` is now an entry in sphinx-daisyui's `icon_links`
+  option, shown in the navigation bar, instead of an entry in Furo's `footer_icons`.
+
 ## [v0.5.1] - 2026-10-29
 
 ### Added

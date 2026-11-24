@@ -154,9 +154,7 @@ class TestRdfCopies:
 
         for address in ADDRESSES:
             for suffix in FORMATS:
-                assert (
-                    Path(app.outdir) / "catalogue" / f"{address}{suffix}"
-                ).is_file()
+                assert (Path(app.outdir) / "catalogue" / f"{address}{suffix}").is_file()
 
     @pytest.mark.parametrize("builder", ["dirhtml", "html"])
     def test_every_copy_is_the_resources_own_rdf_from_the_files(
@@ -259,9 +257,7 @@ class TestRdfCopies:
 
         for suffix in FORMATS:
             assert not copy_file(rebuilt, "methods/loose", suffix).exists()
-        assert not (
-            Path(rebuilt.outdir) / "catalogue" / "methods" / "loose"
-        ).exists()
+        assert not (Path(rebuilt.outdir) / "catalogue" / "methods" / "loose").exists()
 
 
 class TestWholeVocabularyFiles:
@@ -273,9 +269,7 @@ class TestWholeVocabularyFiles:
 
         for address in VOCABULARY_FILES:
             for suffix in FORMATS:
-                assert (
-                    Path(app.outdir) / "catalogue" / f"{address}{suffix}"
-                ).is_file()
+                assert (Path(app.outdir) / "catalogue" / f"{address}{suffix}").is_file()
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
     def test_a_whole_file_is_the_graph_of_the_files_that_state_the_vocabulary(
@@ -359,7 +353,7 @@ class TestWholeVocabularyFiles:
 
 
 class TestAlternateLinks:
-    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    @pytest.mark.parametrize("theme", ["alabaster", "daisyui"])
     def test_every_generated_page_names_each_copy_in_its_head(
         self, make_app: MakeApp, rootdir: Path, tmp_path: Path, theme: str
     ) -> None:

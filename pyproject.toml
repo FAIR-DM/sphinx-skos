@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "docutils>=0.21",
-    "furo>=2025.12.19",
+    "sphinx-daisyui>=0.2.0",
     "rdflib>=7.6",
     "sphinx>=9.0",
 ]
@@ -86,7 +86,3 @@ show_error_codes = true
 
 [tool.deptry]
 extend_exclude = ["tests/", "docs/"]
-
-[tool.deptry.per_rule_ignores]
-# Sphinx loads a theme by name, so nothing imports furo.
-DEP002 = ["furo"]

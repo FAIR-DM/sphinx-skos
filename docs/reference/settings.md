@@ -51,15 +51,15 @@ For each setting the table can hold, the first source that sets it wins:
 ## Theme
 
 When the site sets no `html_theme`, in `conf.py` or with `-D`, the site is built with
-[Furo](https://pradyunsg.me/furo/), which sphinx-skos depends on. A site that sets any theme keeps
+[sphinx-daisyui](https://github.com/SamuelJennings/sphinx-daisyui), which sphinx-skos depends on. A site that sets any theme keeps
 it. The extension adds no stylesheet, script or static path, and one theme option, the
 repository link below. This holds whether the site is built with `sphinx-skos build` or with
 `sphinx-build`.
 
 ## Repository link
 
-When the site is built with Furo and its `pyproject.toml` names the project's repository, the
-footer of every page links it with a GitHub icon. The URL is the first of these keys in
+When the site is built with sphinx-daisyui and its `pyproject.toml` names the project's repository, the
+navigation bar of every page links it with a GitHub icon. The URL is the first of these keys in
 `[project.urls]`, matched in any case, whose value is an `http` or `https` URL:
 
 1. `Repository`
@@ -73,8 +73,8 @@ Repository = "https://github.com/example/vocabularies"
 ```
 
 The file is the same nearest `pyproject.toml` the settings table is read from, and it needs no
-`[tool.sphinx-skos]` table for this. The link goes to Furo's `footer_icons` theme option. A site
-that sets `footer_icons` in its `html_theme_options` keeps its own, and its other theme options
+`[tool.sphinx-skos]` table for this. The link goes to sphinx-daisyui's `icon_links` theme option. A site
+that sets `icon_links` in its `html_theme_options` keeps its own, and its other theme options
 are kept beside the link. Under any other theme, or when no key holds a URL, nothing is added and
 there is no warning.
 

@@ -26,7 +26,7 @@ it finds neither it builds nothing, prints a message that names both, and exits 
   it creates empty, and the site holds only the generated pages and the front page.
 - **No `docs/conf.py`.** The command builds with no configuration file, and loads `sphinx_skos` as
   an extension itself. Every setting comes from the [settings table](settings.md#the-pyprojecttoml-table)
-  and the defaults, and the site uses Furo.
+  and the defaults, and the site uses sphinx-daisyui.
 - **A `docs/conf.py`.** The command builds with it as it is. It lists `sphinx_skos` in its own
   `extensions`, like any Sphinx site, and its values win over the table's. See
   [the order settings are read in](settings.md#the-order-settings-are-read-in).

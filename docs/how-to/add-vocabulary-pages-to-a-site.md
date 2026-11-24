@@ -52,7 +52,7 @@ the next version they are in `skos_directory`.
    `data/`, and change the patterns in `skos_vocabularies`. The directory is about to hold only
    generated files.
 2. Replace the old `.gitignore` entries, one for each vocabulary, with `catalogue/`.
-3. If `conf.py` sets no `html_theme`, the site is now built with Furo instead of Sphinx's default,
+3. If `conf.py` sets no `html_theme`, the site is now built with sphinx-daisyui instead of Sphinx's default,
    alabaster. To keep the old look, set `html_theme = "alabaster"`. Remove any
    `html_theme_options` that only alabaster accepts, or a build that treats warnings as errors
    fails.

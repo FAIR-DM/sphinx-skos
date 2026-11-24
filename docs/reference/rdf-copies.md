@@ -57,7 +57,7 @@ copy's media type and its `href` is the copy's file name, which resolves from th
 address. Pages the site wrote by hand have none. The page also lists its files in a download field, which
 the [directives reference](directives.md#download) describes. The extension adds no template, so the links
 appear under any Sphinx theme that renders Sphinx's `metatags`, which Sphinx's own themes and
-Furo do.
+sphinx-daisyui do.
 
 Copies are written only by builders that write HTML. A resource that is removed from the
 vocabulary files loses its page and its copies on the next build.

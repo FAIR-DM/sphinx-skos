@@ -17,18 +17,9 @@ TABLE_SETTINGS = {
     "logo": "html_logo",
     "directory": "skos_directory",
 }
-THEME = "furo"
+THEME = "daisyui"
 REPOSITORY_KEYS = ("repository", "source", "source code", "homepage")
-GITHUB_ICON = (
-    '<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">'
-    '<path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17'
-    ".55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15"
-    "-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78"
-    "-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64"
-    "-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51"
-    ".56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0"
-    ' .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>'
-)
+GITHUB_ICON = "github"
 
 
 class SiteSettings:
@@ -127,9 +118,9 @@ class SiteSettings:
 
         A title from the table names the site in the theme too, through
         ``html_title``, unless the site sets that itself. A logo path is read
-        from the directory of the table's file. Under Furo, the repository
-        named in the project's URLs is linked from the footer, unless the
-        site sets ``footer_icons`` itself.
+        from the directory of the table's file. Under sphinx-daisyui, the
+        repository named in the project's URLs is linked from the navigation
+        bar with a GitHub icon, unless the site sets ``icon_links`` itself.
 
         Args:
             app: The Sphinx application building the site.
@@ -155,6 +146,6 @@ class SiteSettings:
             config.html_theme = THEME
         url = cls.repository_url(document)
         options = config.html_theme_options
-        if url and config.html_theme == THEME and "footer_icons" not in options:
-            icon = {"name": "GitHub", "url": url, "html": GITHUB_ICON, "class": ""}
-            config.html_theme_options = {**options, "footer_icons": [icon]}
+        if url and config.html_theme == THEME and "icon_links" not in options:
+            icon = {"name": "GitHub", "url": url, "icon": GITHUB_ICON}
+            config.html_theme_options = {**options, "icon_links": [icon]}

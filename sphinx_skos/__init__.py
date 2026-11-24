@@ -12,6 +12,8 @@ from sphinx.environment import BuildEnvironment
 from sphinx.environment.adapters.toctree import global_toctree_for_doc
 from sphinx.project import Project
 from sphinx.util.typing import ExtensionMetadata
+from sphinx_daisyui.navigation import SiteNavigation
+from sphinx_daisyui.options import ThemeOptions
 
 from sphinx_skos.copies import RdfCopies
 from sphinx_skos.directives import DownloadLinks
@@ -165,6 +167,20 @@ def find_outdated(
     return sorted(env.found_docs)
 
 
+def collapse_branches(tree: nodes.Element | None) -> None:
+    """Drop the children of every entry that is neither top level nor current.
+
+    Args:
+        tree: A table of contents as Sphinx builds it for a page, changed in
+            place. ``None`` is left alone.
+    """
+    for item in list(tree.findall(nodes.list_item)) if tree else []:
+        if not {"toctree-l1", "current"} & set(item["classes"]):
+            for branch in item.children[:]:
+                if isinstance(branch, nodes.bullet_list):
+                    item.remove(branch)
+
+
 def collapse_navigation(
     app: Sphinx,
     pagename: str,
@@ -176,15 +192,15 @@ def collapse_navigation(
 
     A vocabulary lists every concept and collection beneath it, so a site's
     navigation would offer every vocabulary as a branch on every page. The
-    page's ``toctree`` function, which themes call to draw the navigation, is
-    replaced by one that builds the same table of contents, keeps the children
-    of a top-level entry, and keeps those of a deeper entry only when the reader
-    is on it or on one of its pages.
+    page's ``toctree`` function, which most themes call to draw the
+    navigation, is replaced by one that builds the same table of contents,
+    keeps the children of a top-level entry, and keeps those of a deeper entry
+    only when the reader is on it or on one of its pages.
 
     Args:
         app: The Sphinx application building the site.
         pagename: The page being written.
-        templatename: The page's template.
+        templatename: The template rendering the page.
         context: The page's template context.
         doctree: The page's document, if it has one.
     """
@@ -200,14 +216,52 @@ def collapse_navigation(
         tree = global_toctree_for_doc(
             app.env, pagename, builder, tags=builder.tags, collapse=collapse, **kwargs
         )
-        for item in list(tree.findall(nodes.list_item)) if tree else []:
-            if not {"toctree-l1", "current"} & set(item["classes"]):
-                for branch in item.children[:]:
-                    if isinstance(branch, nodes.bullet_list):
-                        item.remove(branch)
+        collapse_branches(tree)
         return builder.render_partial(tree)["fragment"]
 
     context["toctree"] = toctree
+
+
+def collapse_daisyui_navigation(
+    app: Sphinx,
+    pagename: str,
+    templatename: str,
+    context: dict[str, Any],
+    doctree: nodes.document | None,
+) -> None:
+    """Collapse the navigation menu that sphinx-daisyui draws for the page.
+
+    sphinx-daisyui builds its menu from the site's table of contents itself
+    instead of calling the page's ``toctree`` function, so the menu it wrote
+    into the page's ``daisy`` context is drawn again from a table of contents
+    that has been collapsed in the same way.
+
+    Args:
+        app: The Sphinx application building the site.
+        pagename: The page being written.
+        templatename: The template rendering the page.
+        context: The page's template context.
+        doctree: The page's document, if it has one.
+    """
+    daisy = context.get("daisy")
+    if not isinstance(daisy, dict) or "navigation" not in daisy:
+        return
+    options = ThemeOptions.from_context(context)
+    site = SiteNavigation(
+        app.env,
+        pagename,
+        app.builder,
+        maxdepth=options.number("navigation_depth", 4),
+        collapse=options.flag("collapse_navigation"),
+        includehidden=options.flag("sidebar_includehidden", True),
+    )
+    collapse_branches(site.tree)
+    show_nav_level = options.number("show_nav_level", 1)
+    daisy["navigation"] = (
+        site.section_menu(show_nav_level)
+        if daisy["sectioned"]
+        else site.menu(show_nav_level)
+    )
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
@@ -234,6 +288,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.connect("env-get-outdated", find_outdated)
     app.connect("html-page-context", write_copies)
     app.connect("html-page-context", collapse_navigation, priority=400)
+    app.connect("html-page-context", collapse_daisyui_navigation, priority=900)
     return {
         "version": __version__,
         "parallel_read_safe": True,

@@ -86,12 +86,8 @@ class TestGeneratedPages:
     def test_a_page_is_titled_with_its_resource(self, app: SphinxTestApp) -> None:
         app.build()
 
-        assert (
-            app.env.titles["catalogue/date-types/available"].astext() == "Available"
-        )
-        assert (
-            app.env.titles["catalogue/date-types/markup"].astext() == "<b>&amp;</b>"
-        )
+        assert app.env.titles["catalogue/date-types/available"].astext() == "Available"
+        assert app.env.titles["catalogue/date-types/markup"].astext() == "<b>&amp;</b>"
         assert app.env.titles["catalogue/date-types"].astext() == "Date types"
 
     @pytest.mark.sphinx("dirhtml", testroot="vocabularies")
@@ -250,7 +246,7 @@ def descendants(app: SphinxTestApp, docname: str) -> set[str]:
 
 
 class SidebarLinks(HTMLParser):
-    """Collect the ``href`` of every link in the navigation sidebar of a Furo page."""
+    """Collect the ``href`` of every link in the navigation sidebar of a page."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -259,15 +255,15 @@ class SidebarLinks(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = dict(attrs)
-        if tag == "div" and (
-            self.depth or "sidebar-tree" in (attributes.get("class") or "").split()
+        if tag == "nav" and (
+            self.depth or "daisy-nav" in (attributes.get("class") or "").split()
         ):
             self.depth += 1
         elif self.depth and tag == "a" and attributes.get("href") is not None:
             self.links.append(str(attributes["href"]))
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "div" and self.depth:
+        if tag == "nav" and self.depth:
             self.depth -= 1
 
 
@@ -453,7 +449,7 @@ class TestVocabularyNavigation:
 
 
 class TestThemesAndBuilders:
-    @pytest.mark.parametrize("theme", ["alabaster", "furo"])
+    @pytest.mark.parametrize("theme", ["alabaster", "daisyui"])
     def test_a_site_builds_clean_with_the_same_pages_under_any_theme(
         self,
         make_app: Callable[..., SphinxTestApp],
@@ -532,9 +528,7 @@ class TestUpgrade:
         assert (site / "thing" / "kept.rst").is_file()
         assert (site / "notes.rst").is_file()
         assert {"thing", "thing/child"}.isdisjoint(app.env.found_docs)
-        assert {"catalogue/thing", "catalogue/thing/child"} <= (
-            app.env.found_docs
-        )
+        assert {"catalogue/thing", "catalogue/thing/child"} <= (app.env.found_docs)
 
     def test_the_output_is_what_a_clean_build_gives(
         self, make_app: Callable[..., SphinxTestApp], rootdir: Path, tmp_path: Path
@@ -578,9 +572,7 @@ class TestCollisions:
     def test_the_sites_own_document_is_kept(self, app: SphinxTestApp) -> None:
         app.build()
 
-        own = (Path(app.srcdir) / "catalogue" / "own.rst").read_text(
-            encoding="utf-8"
-        )
+        own = (Path(app.srcdir) / "catalogue" / "own.rst").read_text(encoding="utf-8")
         assert own.startswith(":orphan:")
         output = (Path(app.outdir) / "catalogue" / "own" / "index.html").read_text(
             encoding="utf-8"
